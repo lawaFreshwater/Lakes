@@ -6,8 +6,8 @@
 ## Write Hilltop XML for Water Quality Data
 
 ## SET LOCAL WORKING DIRECTORY
-od<-getwd()
-setwd("//file/herman/R/OA/08/02/2018/Water Quality/R/Lakes")
+
+
 
 
 ## Load libraries ------------------------------------------------
@@ -15,56 +15,35 @@ require(XML)     ### XML library to write hilltop XML
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
-curdir<-getwd()
+
 
 ### Caterbury
 
 ## To pull the data from Canterbury hilltop server, I have a config csv that contains the 
 ## site and measurement names
 
-fname <- "ecanLWQ_config.csv"
+fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/ecanLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-sites <- subset(df,df$Type=="Site")[,1]
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+configsites <- subset(df,df$Type=="Site")[,1]
+configsites <- as.vector(configsites)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency%in%c('ECAN','Christchurch','Environment Canterbury')])
 Measurements <- subset(df,df$Type=="Measurement")[,1]
 
-
-#function to create xml file from url. 
-ld <- function(url){
-  str<- tempfile(pattern = "file", tmpdir = tempdir())
-  (download.file(url,destfile=str,method="wininet"))
-  xmlfile <- xmlParse(file = str)
-  unlink(str)
-  return(xmlfile)
-}
-
-#function to determine which created xmls have an error message.
-#I/e/ the measurement value does not exist for that site. 
-htsServiceError <- function(url){
-  xmldata <- ld(url)
-  error<-as.character(sapply(getNodeSet(doc=xmldata, path="//Error"), xmlValue))
-  if(length(error)==0){
-    return(TRUE)   # if no error, return TRUE
-  } else {
-    return(FALSE)
-  }
-}
 
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  #url<-"http://hilltopdev.horizons.govt.nz/data.hts?service=Hilltop"
-  #RCurl::getURL(paste(url,"&request=Reset",sep=""))
-  #url <- paste(url,request,sep="")
-  cat(url,"\n")
-  ret <- htsServiceError(url)
-  if(ret==TRUE){
-    xmldata <- ld(url)
-    return(xmldata)
-  }else {
-    xmldata <- NULL
-    return(xmldata)
-    
+  (download.file(url,destfile="tmpecan",method="wininet",quiet=T))
+  # pause(1)
+  xmlfile <- xmlParse(file = "tmpecan")
+  unlink("tmpr")
+  error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
+  if(length(error)==0){
+    return(xmlfile)   # if no error, return xml data
+  } else {
+    return(NULL)
   }
 }
 
@@ -83,57 +62,37 @@ cat("Creating:",Sys.time()-tm,"\n")
 con <- xmlOutputDOM("Hilltop")
 con$addTag("Agency", "ECAN")
 
+      tab="\t"
 
 for(i in 1:length(sites)){
-  
+  cat(i,sites[i],'out of',length(sites),'\n')  
   for(j in 1:length(Measurements)){
     
-    url <- paste("http://wateruse.ecan.govt.nz/wqlawa.hts?service=Hilltop",
+    url <- paste("http://wateruse.ecan.govt.nz/wqlawa.hts?service=Hilltop&Agency=LAWA",
                  "&request=GetData",
                  "&Site=",sites[i],
                  "&Measurement=",Measurements[j],
                  "&From=2006-01-01",
                  "&To=2018-01-01",sep="")
     url <- gsub(" ", "%20", url)
-    cat(url,"\n")
-    
-    
-    #------------------------------------------
-    
-    
-    
+
     xmlfile <- requestData(url)
-    
-    
+
     if(!is.null(xmlfile)){
       xmltop<-xmlRoot(xmlfile)
       
       m<-xmltop[['Measurement']]
-      
-      
+
       # Create new node to replace existing <Data /> node in m
       DataNode <- newXMLNode("Data",attrs=c(DateFormat="Calendar",NumItems="2"))
-      
-      #addChildren(DataNode, newXMLNode(name = "E",parent = DataNode))
-      
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "T","time"))
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I1","item1"))
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I2","item2"))
-      
-      
-      #cat(saveXML(DataNode),"\n")
-      tab="\t"
-      
+
       #work on this to make more efficient
       if(Measurements[j]=="WQ Sample"){
         ## Make new E node
         # Get Time values
-        #ans <- lapply(c("T"),function(var) unlist(xpathApply(m,paste("//",var,sep=""),xmlValue)))
         ans <- xpathApply(m,"//T",xmlValue)
         ans <- unlist(ans)
-        
-        
-        
+
         #new bit here
         for(k in 1:length(ans)){
           
@@ -161,11 +120,8 @@ for(i in 1:length(sites)){
           }
           # Adding the Item1 node
           addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I1",item1))
-          
         }
-        
-        
-        
+
       } else {
         ## Make new E node
         # Get Time values
@@ -227,8 +183,9 @@ for(i in 1:length(sites)){
     }
   }
 }
+
+
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="ecanLWQ.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/ecanLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 
-setwd(od)

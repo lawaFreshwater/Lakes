@@ -15,7 +15,7 @@ ANALYSIS<-"LOAD WFS"
 # Set working directory
 
 od <- getwd()
-wd <- "\\\\file\\herman\\R\\OA\\08\\02\\2018\\Water Quality\\R\\Lakes"
+wd <- "h:/ericg/16666LAWA/2018/Lakes"
 setwd(wd)
 
 #logfolder <- "\\\\file\\herman\\R\\OA\\08\\02\\2018\\Water Quality\\ROutput\\"
@@ -24,24 +24,24 @@ logfolder <- paste(wd,"\\",sep="")
 #/* -===Include required function libraries===- */ 
 
 
-source("//file/herman/R/OA/08/02/2018/Water Quality/R/lawa_state/scripts/WQualityStateTrend/lawa_state_functions.R")
+source("file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/scripts/WQualityStateTrend/lawa_state_functions.R")
 
 ## Supplementary functions
 
 
 
-ld <- function(url,dataLocation,case.fix=TRUE){
+ld <- function(urlIn,dataLocation,case.fix=TRUE){
   if(dataLocation=="web"){
     str<- tempfile(pattern = "file", tmpdir = tempdir())
-    (download.file(url,destfile=str,method="wininet"))
+    (download.file(urlIn,destfile=str,method="wininet"))
     
     xmlfile <- xmlParse(file = str)
     unlink(str)
   } else if(dataLocation=="file"){
-    cc(url)
-    message("trying file",url,"\nContent type  'text/xml'\n")
-    if(grepl("xml$",url)){
-      xmlfile <- xmlParse(url)
+    cc(urlIn)
+    message("trying file",urlIn,"\nContent type  'text/xml'\n")
+    if(grepl("xml$",urlIn)){
+      xmlfile <- xmlParse(urlIn)
     } else {
       xmlfile=FALSE
     }
@@ -98,12 +98,12 @@ cc <- function(file){
 # Load WFS locations from CSV
 
 ## Load csv with WFS addresses
-urls2018      <- "//file/herman/R/OA/08/02/2018/Water Quality/R/lawa_state/CouncilWFS.csv"
+urls2018      <- "file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/CouncilWFS.csv"
 urls          <- read.csv(urls2018,stringsAsFactors=FALSE)
 #urls$Agency[urls$Agency=="TDC"] <- "xTDC"   ## Commenting out Tasman DC due to Hilltop Server issues
 #urls2016      <- "//file/herman/R/OA/08/02/2016/Water Quality/R/lawa_state/CouncilWFS.csv"
 #urls          <- read.csv(urls2016,stringsAsFactors=FALSE)
-stopGapNames  <- read.csv("//file/herman/R/OA/08/02/2018/Water Quality/R/lawa_state/agencyRegion.csv",stringsAsFactors=FALSE)
+# stopGapNames  <- read.csv("//file/herman/R/OA/08/02/2018/Water Quality/R/lawa_state/agencyRegion.csv",stringsAsFactors=FALSE)
 
 # Drop BOPRC - GIS Server erroring
 #urls <- urls[-2,]
@@ -246,7 +246,7 @@ for(h in 1:length(urls$URL)){
                                   path=paste("//emar:LawaSiteID/../../",ns,"MonitoringSiteReferenceData",module,"/emar:",vars[i],sep="")), xmlValue)
             cat(vars[i],":\t",length(a),"\n")
             #Cleaning var[i] to remove any leading and trailing spaces
-            trimws(a)
+            a <- trimws(a)
             nn <- length(a)
           } else {
             # for all subsequent URL's
@@ -256,9 +256,9 @@ for(h in 1:length(urls$URL)){
             cat(vars[i],":\t",length(b),"\n")
             if(length(b)==0){
               if(vars[i]=="Region"){
-                b[1:nn] <-stopGapNames[stopGapNames$Agency==urls$Agency[h],2]
+                b[1:nn] <-urls$Agency[h]#stopGapNames[stopGapNames$Agency==urls$Agency[h],2]
               } else if(vars[i]=="Agency"){
-                b[1:nn]<-stopGapNames[stopGapNames$Agency==urls$Agency[h],1]
+                b[1:nn]<-urls$Agency[h]#stopGapNames[stopGapNames$Agency==urls$Agency[h],1]
               } else {
                 b[1:nn]<-""
               }
@@ -269,8 +269,8 @@ for(h in 1:length(urls$URL)){
             
             a <- cbind(unlist(a),unlist(b))
           }
-      
         }
+        
         a <- as.data.frame(a,stringsAsFactors=FALSE)
         ### grab the latitude and longitude values (WFS version must be 1.1.0)
         latlong    <- sapply(getNodeSet(doc=xmldata, 
@@ -339,13 +339,15 @@ pseudo.titlecase = function(str)
 
 ## Swapping coordinate values for Agency=Environment Canterbury Regional Council, Christchurch
 
-agencies <- c("Environment Canterbury","Christchurch")
-
-for(a in 1:length(agencies)){
-  lon <- siteTable$Lat[siteTable$Agency==agencies[a]]
-  siteTable$Lat[siteTable$Agency==agencies[a]] <- siteTable$Long[siteTable$Agency==agencies[a]]
-  siteTable$Long[siteTable$Agency==agencies[a]]=lon
-}
+toSwitch=which(siteTable$Long<0 & siteTable$Lat>0)
+unique(siteTable$Agency[toSwitch])
+newLon=siteTable$Lat[toSwitch]
+siteTable$Lat[toSwitch] <- siteTable$Long[toSwitch]
+siteTable$Long[toSwitch]=newLon
+rm(newLon,toSwitch)
+plot(siteTable$Long,siteTable$Lat,col=as.numeric(factor(siteTable$Agency)))
+points(siteTable$Long,siteTable$Lat,pch=16,cex=0.2)
+table(siteTable$Agency)
 
 #siteTable$Long[siteTable$LawaSiteID=="NRWQN-00022"] <-siteTable$Long[siteTable$LawaSiteID=="NRWQN-00022"][2]
 
@@ -353,8 +355,8 @@ for(a in 1:length(agencies)){
 # NZTM coordinates from WCRC website: 1466541,5295450
 # WGS84, now:   Latitude	Longitude  	-42.48179737	171.37623113
 
-siteTable$Lat[siteTable$LawaSiteID=="WCRC-00031"]  <- -42.48179737
-siteTable$Long[siteTable$LawaSiteID=="WCRC-00031"] <- 171.37623113
+# siteTable$Lat[siteTable$LawaSiteID=="WCRC-00031"]  <- -42.48179737
+# siteTable$Long[siteTable$LawaSiteID=="WCRC-00031"] <- 171.37623113
 
 ## Correcting variations in Region names
 siteTable$Region[siteTable$Region=="BayOfPlenty"]   <- "Bay of Plenty"
@@ -364,8 +366,13 @@ siteTable$Region[siteTable$Region=="WestCoast"]     <- "West Coast"
 
 
 ## Output for next script
-write.csv(x = siteTable,file = "LAWA_Site_Table.csv")
+write.csv(x = siteTable,file = "LAWA_Site_Table_Lakes.csv")
 #write.csv(x = siteTable,file = "LAWA_Site_Table1.csv")
-write.csv(x = siteTable,file = "LAWA_Site_Table_WFS_PULL.csv")
+write.csv(x = siteTable,file = "LAWA_Site_Table_WFS_PULL_Lakes.csv")
 
 
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+configsites <- subset(df,df$Type=="Site")[,2]
+configsites <- as.vector(configsites)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='nrc'])
+Measurements <- subset(df,df$Type=="Measurement")[,1]

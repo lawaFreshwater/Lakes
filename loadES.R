@@ -6,8 +6,8 @@
 ## Write Hilltop XML for Water Quality Data
 
 ## SET LOCAL WORKING DIRECTORY
-od<-getwd()
-setwd("//file/herman/R/OA/08/02/2018/Water Quality/R/Lakes")
+
+
 
 
 ## Load libraries ------------------------------------------------
@@ -15,7 +15,7 @@ require(XML)     ### XML library to write hilltop XML
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
-curdir<-getwd()
+
 
 ### Southland
 
@@ -25,45 +25,24 @@ curdir<-getwd()
 fname <- "esLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-sites <- subset(df,df$Type=="Site")[,1]
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+configsites <- subset(df,df$Type=="Site")[,1]
+configsites <- as.vector(configsites)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='ES'])
 Measurements <- subset(df,df$Type=="Measurement")[,1]
-
-#function to create xml file from url. 
-ld <- function(url){
-  str<- tempfile(pattern = "file", tmpdir = tempdir())
-  (download.file(url,destfile=str,method="wininet"))
-  xmlfile <- xmlParse(file = str)
-  unlink(str)
-  return(xmlfile)
-}
-
-#function to determine which created xmls have an error message.
-#I/e/ the measurement value does not exist for that site. 
-htsServiceError <- function(url){
-  xmldata <- ld(url)
-  error<-as.character(sapply(getNodeSet(doc=xmldata, path="//Error"), xmlValue))
-  if(length(error)==0){
-    return(TRUE)   # if no error, return TRUE
-  } else {
-    return(FALSE)
-  }
-}
 
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  #url<-"http://hilltopdev.horizons.govt.nz/data.hts?service=Hilltop"
-  #RCurl::getURL(paste(url,"&request=Reset",sep=""))
-  #url <- paste(url,request,sep="")
-  cat(url,"\n")
-  ret <- htsServiceError(url)
-  if(ret==TRUE){
-    xmldata <- ld(url)
-    return(xmldata)
-  }else {
-    xmldata <- NULL
-    return(xmldata)
-    
+  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  # pause(1)
+  xmlfile <- xmlParse(file = "tmpnrc")
+  unlink("tmpr")
+  error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
+  if(length(error)==0){
+    return(xmlfile)   # if no error, return xml data
+  } else {
+    return(NULL)
   }
 }
 
@@ -226,7 +205,7 @@ for(i in 1:length(sites)){
   }
 }
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="esLWQ.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/esLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 
 setwd(od)

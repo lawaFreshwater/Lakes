@@ -8,8 +8,8 @@ rm(list = ls())
 ## Write Hilltop XML for Water Quality Data
 
 ## SET LOCAL WORKING DIRECTORY
-od<-getwd()
-setwd("//file/herman/R/OA/08/02/2018/Water Quality/R/Lakes")
+
+
 
 
 ## Load libraries ------------------------------------------------
@@ -17,7 +17,7 @@ require(XML)     ### XML library to write hilltop XML
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
-curdir<-getwd()
+
 
 tab="\t"
 
@@ -27,22 +27,25 @@ tab="\t"
 ## To pull the data from hilltop server, I have a config csv that contains the 
 ## site and measurement names
 
-fname <- "orcLWQ_config.csv"
+fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/orcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-sites <- subset(df,df$Type=="Site")[,1]
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+configsites <- subset(df,df$Type=="Site")[,1]
+configsites <- as.vector(configsites)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='ORC'])
 Measurements <- subset(df,df$Type=="Measurement")[,1]
-
 
 #To get metadata into data frame
 
-mname <- "LawaLakesWater.csv"
+mname <- "h:/ericg/16666LAWA/2018/Lakes/1.Imported/LawaLakesWater.csv"
 meta <- read.csv(mname,sep=",",stringsAsFactors=FALSE)
 
 metaMeasurements <- unique(meta$Measurement)
 
-## Manually matching order of measurement names in the measurement vector to the metaMeasurement vector 
-metaMeasurements <- metaMeasurements[c(12,9,7,1,13,2)]
+## Manually matching order of measurement names in the measurement vector to the metaMeasurement vector
+# metaMeasurements <- metaMeasurements[c(12,9,7,1,13,2)]
+metaMeasurements <- metaMeasurements[c(12,9,7,1,13,2,6,6,NA,NA,NA)]
 
 meas <- cbind.data.frame(metaMeasurements,Measurements, stringsAsFactors=FALSE)
 names(meas) <- c("Measurement","MeasurementName")
@@ -50,42 +53,20 @@ names(meas) <- c("Measurement","MeasurementName")
 meta <- merge(meta,meas,by="Measurement",all = TRUE)
 
 
-#function to create xml file from url. 
-ld <- function(url){
-  str<- tempfile(pattern = "file", tmpdir = tempdir())
-  (download.file(url,destfile=str,method="wininet"))
-  xmlfile <- xmlParse(file = str)
-  unlink(str)
-  return(xmlfile)
-}
 
-#function to determine which created xmls have an error message.
-#I/e/ the measurement value does not exist for that site. 
-htsServiceError <- function(url){
-  xmldata <- ld(url)
-  error<-as.character(sapply(getNodeSet(doc=xmldata, path="//Error"), xmlValue))
-  if(length(error)==0){
-    return(TRUE)   # if no error, return TRUE
-  } else {
-    return(FALSE)
-  }
-}
 
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  #url<-"http://hilltopdev.horizons.govt.nz/data.hts?service=Hilltop"
-  #RCurl::getURL(paste(url,"&request=Reset",sep=""))
-  #url <- paste(url,request,sep="")
-  cat(url,"\n")
-  ret <- htsServiceError(url)
-  if(ret==TRUE){
-    xmldata <- ld(url)
-    return(xmldata)
-  }else {
-    xmldata <- NULL
-    return(xmldata)
-    
+  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  # pause(1)
+  xmlfile <- xmlParse(file = "tmpnrc")
+  unlink("tmpr")
+  error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
+  if(length(error)==0){
+    return(xmlfile)   # if no error, return xml data
+  } else {
+    return(NULL)
   }
 }
 
@@ -109,9 +90,10 @@ con$addTag("Agency", "ORC")
 #Adding in metadata
 
 for(i in 1:length(sites)){
+  cat(i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
     url <- paste("http://gisdata.orc.govt.nz/hilltop/WQGlobal.hts?service=Hilltop",
-                 "&request=GetData",
+                 "&request=GetData&agency=LAWA",
                  "&Site=",sites[i],
                  "&Measurement=",Measurements[j],
                  "&From=2006-01-01",
@@ -120,7 +102,7 @@ for(i in 1:length(sites)){
     cat(url,"\n")
     
     #------------------------------------------
-    cat("Getting measurement",Measurements[j],"for",sites[i],".....\n")
+    # cat("Getting measurement",Measurements[j],"for",sites[i],".....\n")
     #Adding measurements values
     
     xmlfile <- requestData(url)
@@ -147,31 +129,29 @@ for(i in 1:length(sites)){
       ansValue <- unlist(ansValue)
       
       # subset data based on site and measurement and sort on date
-      
-      
       p <- subset(meta, meta$Site.Name==sites[i] & meta$MeasurementName==Measurements[j])
-      
+
       p$pDTz <- as.POSIXct(strptime(p$Date.Time,format = "%d/%m/%Y",tz="GMT"))
       p <- p[order(p$pDTz),]
-      
+
       #Concatenate a column with all metadata parameters included and create vector
-      p$I2 <- paste("LAWAID", p$LAWAID, "ORC", p$ORC, "Measurement", p$Measurement, 
-                    "ReportedLabValue", p$ReportedLabValue, "RawValue", p$RawValue, "Depthfrom", p$Depthfrom, 
-                     "Depthto", p$Depthto, "SampleLevel", p$Samplelevel, 
-                    "Method", p$Method, "DetectionLimit", p$DetectionLimit, "QualityCode", 
-                    p$QualityCode, "SampleFrequency", p$SampleFrequency, "LakeType", 
+      p$I2 <- paste("LAWAID", p$LAWAID, "ORC", p$ORC, "Measurement", p$Measurement,
+                    "ReportedLabValue", p$ReportedLabValue, "RawValue", p$RawValue, "Depthfrom", p$Depthfrom,
+                     "Depthto", p$Depthto, "SampleLevel", p$Samplelevel,
+                    "Method", p$Method, "DetectionLimit", p$DetectionLimit, "QualityCode",
+                    p$QualityCode, "SampleFrequency", p$SampleFrequency, "LakeType",
                     p$Laketype, sep=tab)
-      
+
       # remove unnecessary variables. Measurement, LAWAID, ORC, Site.Name, Date.Time and the last two pDTz and I2 (
       # all other columns contianed the info noiw in I2
       p<-p[,c(1:5,17:18)]
-      
+
       ## converting xml to dataframe in order to match datatimes for wq measurement parameters
       mdata <- xmlToDataFrame(m[['Data']],stringsAsFactors=FALSE)
       mdata$pDTz <- as.POSIXct(strptime(mdata$T,format = "%Y-%m-%dT%H:%M:%S",tz="GMT"))
       mdata <- merge(mdata,p,by="pDTz",all=TRUE)
       mdata <- mdata[complete.cases(mdata$T),]
-      
+
       
       # loop through TVP nodes
       for(N in 1:xmlSize(m[['Data']])){  ## Number of Time series values
@@ -240,7 +220,6 @@ for(i in 1:length(sites)){
   }
 }
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="orcLWQ.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/orcLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 
-setwd(od)

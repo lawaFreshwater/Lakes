@@ -6,10 +6,20 @@ Value,Type
 45003,Site
 45011,Site
 44616,Site
-pH,Measurement
+pH,Retired
 Ammonia,Measurement
 Total Nitrogen,Measurement
+Total Oxidised Nitrogen,Measurement
 Total Phosphorus,Measurement
 e.Coli,Measurement
 Transparency,Measurement
 Chlorophyll,Measurement
+Total Phosphorus,Measurement
+Soluble Phosphorus,Measurement
+SolublePhosphorus.RAW,Measurement
+DRP,Measurement
+Nitrate,Measurement
+Dissolved Reactive Phosphorus,Measurement
+Phosphorus (Dissolved Reactive),Measurement
+Nitrogen (Nitrate),Measurement
+pH,Measurement

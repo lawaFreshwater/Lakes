@@ -17,44 +17,33 @@ require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
 
-od<-getwd()
-setwd("//file/herman/R/OA/08/02/2018/Water Quality/R/Lakes")
+
+
 
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  #url<-"http://hilltopdev.horizons.govt.nz/data.hts?service=Hilltop"
-  #RCurl::getURL(paste(url,"&request=Reset",sep=""))
-  #url <- paste(url,request,sep="")
-  cat(url,"\n")
-  # ret <- htsServiceError(url)
-  #if(ret==TRUE){
-  xmldata <- ld(url)
-  return(xmldata)
-  # }else {
-  # xmldata <- NULL
-  # return(xmldata)
-  
-  # }
-}
-
-#function to create xml file from url. 
-ld <- function(url){
-  str<- tempfile(pattern = "file", tmpdir = tempdir())
-  (download.file(url,destfile=str,method="wininet"))
-  xmlfile <- xmlParse(file = str)
-  unlink(str)
-  return(xmlfile)
+  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  # pause(1)
+  xmlfile <- xmlParse(file = "tmpnrc")
+  unlink("tmpr")
+  error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
+  if(length(error)==0){
+    return(xmlfile)   # if no error, return xml data
+  } else {
+    return(NULL)
+  }
 }
 
 
-fname <- "wrcLWQ_config.csv"
+fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/wrcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-sites <- subset(df,df$Type=="Site")[,1]
-sites <- as.vector(sites)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+configsites <- subset(df,df$Type=="Site")[,1]
+configsites <- as.vector(configsites)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='WRC'])
 Measurements <- subset(df,df$Type=="Measurement")[,1]
-Measurements <- as.vector(Measurements)
 
 ## Load libraries ------------------------------------------------
 require(RODBC)   ### ODBC library for SQL connection
@@ -62,55 +51,74 @@ require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(XML)     ### XML library to write hilltop XML
 
 for(i in 1:length(sites)){
+  cat('\n',i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
     
     
-    url <- paste("http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?datasource=0&service=SOS&version=2.0&request=GetObservation&featureOfInterest="
-                  ,sites[i], "&procedure=LWQ.Sample.Results.P&observedProperty=", Measurements[j], "&temporalfilter=om:phenomenonTime,P12Y", sep="")
-    xmlfile <- ld(url)
+    url <- paste0("http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?",
+                  "datasource=0&service=SOS&version=2.0&request=GetObservation&agency=LAWA&featureOfInterest=",
+                  sites[i], "&procedure=LWQ.Sample.Results.P&observedProperty=",
+                  Measurements[j], "&temporalfilter=om:phenomenonTime,P12Y")
+    xmlfile <- requestData(url)
     
-   
-    #urlc <- "http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?datasource=0&service=SOS&version=2.0&request=GetCapabilities"
-    #xmlfilec <- requestData(urlc)
+   if(xpathApply(xmlRoot(xmlfile),path="count(//wml2:point)",xmlValue)==0){
+     next
+   }
+    cat(Measurements[j],'\t')
+    #STEP 1: Load wml2:DefaultTVPMetadata to a vector
+    xattrs_qualifier         <- xpathSApply(xmlfile, "//wml2:DefaultTVPMeasurementMetadata/wml2:qualifier/@xlink:title")
+    if(is.null(xattrs_qualifier)){
+      xattrs_qualifier <- ""
+    }
+    xattrs_uom               <- xpathSApply(xmlfile, "//wml2:DefaultTVPMeasurementMetadata/wml2:uom/@code")
+    xattrs_interpolationType <- xpathSApply(xmlfile, "//wml2:DefaultTVPMeasurementMetadata/wml2:interpolationType/@xlink:title")
+    xattrs_default           <- c(xattrs_qualifier,xattrs_uom,xattrs_interpolationType)
+    names(xattrs_default)    <- c("qualifier","uom","interpolationType")
+    rm(xattrs_qualifier,xattrs_uom,xattrs_interpolationType)
     
+    #STEP 2: Get wml2:MeasurementTVP metadata values
+    xattrs_qualifier         <- xpathSApply(xmlfile, "//wml2:TVPMeasurementMetadata/wml2:qualifier/@xlink:title")
     
-    #For RERIMP
+    #If xattrs_qualifier is empty, it means there are no additional qualifiers in this timeseries.
+    #Test for Null, and create an empty dataframe as a consequence 
+    if(is.null(xattrs_qualifier)){
+      df_xattrs <- data.frame(time=character(),qualifier=character())
+    } else{
+      xattrs_time              <- sapply(getNodeSet(doc=xmlfile, "//wml2:TVPMeasurementMetadata/wml2:qualifier/@xlink:title/../../../../wml2:time"), xmlValue)
+      #Store measurementTVPs in dataframe to join back into data after it is all retrieved
+      df_xattrs <- as.data.frame(xattrs_time,stringsAsFactors = FALSE)
+      names(df_xattrs) <- c("time")
+      df_xattrs$qualifier <- xattrs_qualifier
+      rm(xattrs_time,xattrs_qualifier)
+    }    
+    
+    #Step3
+    
     #Create vector of times
     time <- sapply(getNodeSet(doc=xmlfile, "//wml2:time"), xmlValue)
     #Create vector of  values
     value <- sapply(getNodeSet(doc=xmlfile, "//wml2:value"), xmlValue)
     
-    df <- as.data.frame(time, stringsAsFactors = FALSE)
-    df$value <- value
-    
-    
-    #For WARIMP
-    #Create vector of times
-    #time <- sapply(getNodeSet(doc=xmlfilew, "//wml2:time"), xmlValue)
-    #Create vector of  values
-    #value <- sapply(getNodeSet(doc=xmlfilew, "//wml2:value"), xmlValue)
-    
-    #dfw <- as.data.frame(time, stringsAsFactors = FALSE)
-    #dfw$value <- value
-    
-    
-    #Add dataframes together, Not sure if need to overwrite value to one
-    if(nrow(df)==0){
-      next
-    }  else {
-      xmldata <- xmlfile
-    }
-    
-    #Create vector of units
-    myPath<-"//wml2:uom"
-    c<-getNodeSet(xmldata, path=myPath)
-    u<-sapply(c,function(el) xmlGetAttr(el, "code"))
+    df <- data.frame(time=time,value=value, stringsAsFactors = FALSE)
+    rm(time, value)
     
     df$Site <- sites[i]
     df$Measurement <- Measurements[j]
-    df$Units <- u
+    df$Units <- xattrs_default[2]  ## xattrs_default vector contains (qualifier_default, unit, interpolationtype)
     df <- df[,c(3,4,1,2,5)]
     
+    
+    
+    # merge in additional qualifiers, if present, from df_xattrs
+    if(nrow(df_xattrs)!=0) {
+      df <- merge(df,df_xattrs,by="time",all=TRUE)
+      df$qualifier[is.na(df$qualifier)] <- xattrs_default[1]
+    } else {
+      df$qualifier<-xattrs_default[1]
+    }
+    
+    # Remove default metadata attributes for current timeseries
+    rm(xattrs_default, df_xattrs)
     
     
     if(!exists("Data")){
@@ -118,6 +126,10 @@ for(i in 1:length(sites)){
     } else{
       Data <- rbind.data.frame(Data, df)
     }
+    
+    # Remove current timeseries data frame
+    rm(df, xmlfile)
+    
     
     
     
@@ -167,12 +179,10 @@ while(i<=max){
     con$addTag("ItemFormat", "F")
     con$addTag("Divisor", "1")
     con$addTag("Units", Data$Units[i])
-    #con$addTag("Units", "Joking")
     con$addTag("Format", "#.###")
     con$closeTag() # ItemInfo
     con$closeTag() # DataSource
-    #saveXML(con$value(), file="out.xml")
-    
+
     # for the TVP and associated measurement water quality parameters
     con$addTag("Data", attrs=c(DateFormat="Calendar", NumItems="2"),close=FALSE)
     d<- Data$Measurement[i]
@@ -181,12 +191,35 @@ while(i<=max){
     
     while(Data$Measurement[i]==d){
       # for each tvp
-      con$addTag("E",close=FALSE)
-      con$addTag("T",Data$time[i])
-      con$addTag("I1", Data$value[i])
-      con$addTag("I2", paste("Units", Data$Units[i], sep="\t"))
-      
-      con$closeTag() # E
+      if(!is.na(Data$qualifier[i])){    # this will need to be expanded to deal with range of qualifiers
+        if(grepl("8202",Data$qualifier[i])){                   ## GREATER THAN VALUES
+          con$addTag("E",close=FALSE)
+          con$addTag("T",Data$time[i])
+          con$addTag("I1", paste0(">",Data$value[i]))
+          con$addTag("I2", "$ND\t>\t")
+          con$closeTag() # E
+        } else if(grepl("16394",Data$qualifier[i])){           ## LESS THAN VALUES
+          con$addTag("E",close=FALSE)
+          con$addTag("T",Data$time[i])
+          con$addTag("I1", paste0("<",Data$value[i]))
+          con$addTag("I2", "$ND\t<\t")
+          con$closeTag() # E 
+        } else {                                               ## UNCENSORED VALUES
+          con$addTag("E",close=FALSE)
+          con$addTag("T",Data$time[i])
+          con$addTag("I1", Data$value[i])
+          con$addTag("I2", "\t")
+          con$closeTag() # E
+        }
+        # Write all other result values  
+      } else {                                                 ## UNCENSORED VALUES
+        con$addTag("E",close=FALSE)
+        con$addTag("T",Data$time[i])
+        con$addTag("I1", Data$value[i])
+        con$addTag("I2", "\t")
+        con$closeTag() # E
+        
+      }
       i<-i+1 # incrementing overall for loop counter
       if(i>max){break}
     }
@@ -238,5 +271,5 @@ while(i<=max){
   
 }
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="wrcLWQ.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/wrcLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")

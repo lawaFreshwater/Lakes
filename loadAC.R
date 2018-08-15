@@ -4,69 +4,60 @@ rm(list = ls())
 # returns string w/o leading or trailing whitespace
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
-## Convert datestring to mow seconds (number of seconds since 1-Jan-1940 00:00)
-#mowSecs <- function(x){
-#  s<-strptime("1940-01-01","%Y-%m-%d")
-#  t<-strptime(x,"%Y-%m-%d %H:%M:%S")
-#   t<-strptime(x,"%Y-%m-%d %H:%M:%S")
-#  x<-(t-s)*86400
-#}
+
 
 require(XML)     ### XML library to write hilltop XML
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
 
-od<-getwd()
-setwd("//file/herman/R/OA/08/02/2018/Water Quality/R/Lakes")
 
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  #url<-"#http://hilltopdev.horizons.govt.nz/data.hts?service=Hilltop"
-  #RCurl::getURL(paste(url,"&request=Reset",sep=""))
-  #url <- paste(url,request,sep="")
-  cat(url,"\n")
-  # ret <- htsServiceError(url)
-  #if(ret==TRUE){
-  xmldata <- ld(url)
-  return(xmldata)
-  # }else {
-  # xmldata <- NULL
-  # return(xmldata)
-  
-  # }
+  (download.file(url,destfile="tmpac",method="wininet",quiet=T))
+  # pause(1)
+  xmlfile <- xmlParse(file = "tmpac")
+  unlink("tmpr")
+  error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
+  if(length(error)==0){
+    return(xmlfile)   # if no error, return xml data
+  } else {
+    return(NULL)
+  }
 }
 
+# http://aklc.hydrotel.co.nz:8080/KiWIS/KiWIS?service=kisters&type=queryServices&request=getTimeseriesList&datasource=2&format=html&station_no=6301,6303,7605,45001,45003,45011,44616&returnfields=station_name,station_no,ts_id,ts_name,parametertype_name
 
-#function to create xml file from url. 
-ld <- function(url){
-  str<- tempfile(pattern = "file", tmpdir = tempdir())
-  (download.file(url,destfile=str,method="wininet"))
-  xmlfile <- xmlParse(file = str)
-  unlink(str)
-  return(xmlfile)
-}
+# newconfig=read.csv('h:/ericg/16666LAWA/2018/Lakes/AClakesCONFIG.csv',stringsAsFactors = F,encoding = 'UTF-8')
+# newconfig=newconfig[newconfig$parametertype_name%in%
+#                       c("Soluble Phosphorus","e.Coli","eColiMPN",
+#                         "Ammonia","Chlorophyll","Transparency","Turbidity","Total Nitrogen","Total Phosphorus"),]
 
-fname <- "acLWQ_config.csv"
+
+fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/acLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
-
-sites <- subset(df,df$Type=="Site")[,1]
-sites <- as.vector(sites)
 Measurements <- subset(df,df$Type=="Measurement")[,1]
-Measurements <- as.vector(Measurements)
+configsites <- subset(df,df$Type=="Site")[,1]
+configsites <- as.vector(configsites)
 
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='AC'])
+
+sites=configsites
 ## Load libraries ------------------------------------------------
 require(RODBC)   ### ODBC library for SQL connection
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(XML)     ### XML library to write hilltop XML
 
 for(i in 1:length(sites)){
+  cat('\n',i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
-    url <- paste("http://aklc.hydrotel.co.nz:8080/KiWIS/KiWIS?datasource=2&service=SOS&version=2.0&request=GetObservation&featureOfInterest="
-                 ,sites[i], "&observedProperty=", Measurements[j], "&Procedure=raw&temporalfilter=om:phenomenonTime,P12Y", sep="")
+    url <- paste("http://aklc.hydrotel.co.nz:8080/KiWIS/KiWIS?",
+                 "datasource=2&service=SOS&version=2.0&request=GetObservation&featureOfInterest=",sites[i],
+                 "&observedProperty=", Measurements[j], "&Procedure=raw&temporalfilter=om:phenomenonTime,P12Y", sep="")
     url <- gsub(" ", "%20", url)
-    xmlfile <- ld(url)
+    xmlfile <- requestData(url)
     
     
     
@@ -77,6 +68,7 @@ for(i in 1:length(sites)){
     
     
     if(length(time!=0)){
+      cat('got some',Measurements[j],'\t')
       #Get QC metadata
       xPath <-"//wml2:qualifier"
       c<-getNodeSet(xmlfile,path=xPath)
@@ -227,5 +219,5 @@ if(length(t)==0){
   }
 }
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="acLWQ.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/acLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")

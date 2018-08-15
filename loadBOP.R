@@ -8,14 +8,18 @@
 # Clearing workspace
 rm(list = ls())
 
-# Set working directory
-od <- getwd()
-wd <- "\\\\file\\herman\\R\\OA\\08\\02\\2016\\Water Quality\\R\Lakes"
-setwd(wd)
+
+## Load libraries ------------------------------------------------
+require(XML)     ### XML library to write hilltop XML
+require(dplyr)   ### dply library to manipulate table joins on dataframes
+require(ggplot2)
+library(gridExtra)
+library(scales)
+require(tidyr)   ### for reshaping data
 
 #/* -===Include required function libraries===- */ 
 
-source("lawa_state_functions.R")
+source("file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/scripts/WQualityStateTrend/lawa_state_functions.R")
 
 ## --- Functions ---
 # returns string w/o leading or trailing whitespace
@@ -41,20 +45,12 @@ value <- function (val){
   
 }
 
+
+
 nd <- function(val){
   n<-grepl(pattern = "^<",x=val,perl = TRUE)
 }
 
-## Load libraries ------------------------------------------------
-require(XML)     ### XML library to write hilltop XML
-require(dplyr)   ### dply library to manipulate table joins on dataframes
-require(ggplot2)
-library(gridExtra)
-library(scales)
-require(tidyr)   ### for reshaping data
-
-
-curdir<-getwd()
 
 ### BAY OF PLENTY
 
@@ -63,10 +59,12 @@ curdir<-getwd()
 ### and incomplete data reads occassionally.
 #fname <- "//file/herman/R/OA/08/02/2015/Water Quality/0.As Supplied/BOP/csv/bop.txt"
 #fname <- "z://data/RScript/lawa_state/2015/csv/boprc-uncensored2.txt"
-fname <- "//file/herman/R/OA/08/02/2016/Water Quality/1.AsSupplied/BOP/BOPLakes.txt"
-df <- read.csv(fname,sep="\t",stringsAsFactors=FALSE)
+fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/1.Imported/BOP lake data 2017_Cawthron.csv"
+df <- read.csv(fname,stringsAsFactors=FALSE,fileEncoding = 'UTF-8-BOM')
+
+df <- gather(data=df,key="Measurement",value="ReportedLabValue",pH:TP)
 #df <- df[,c(1:13)]
-df$mowsecs   <- mowSecs(df$Date.Time)
+df$mowsecs   <- mowSecs(df$sdate)
 #check mowSec output
 cat("Number of NAs in derived mowsec field: ",sum(is.na(df$mowsecs)),"out of",length(df$mowsecs),"rows\n")
 
@@ -78,7 +76,7 @@ if(sum(is.na(df$mowsecs))>0){
 }
 
 
-df$Date.Time <- strptime(df$Date.Time,"%d/%m/%Y %H:%M", tz="GMT")
+df$Date.Time <- strptime(df$sdate,"%d/%m/%Y", tz="GMT")
 df$DataSource <- df$Measurement
 df$Qmowsecs   <- df$mowsecs   ## storing original mowsec value should any duplicate samples be found.
 
@@ -89,62 +87,12 @@ df$color[df$nd==FALSE]    <- "black"
 
 # reorder data to enable writing to Hilltop File
 # Sort by indexing order - Site, Measurement, DateTime
-df <- df[order(df$Site.Name,df$Measurement,df$mowsecs),]
+df <- df[order(df$site.name,df$Measurement,df$mowsecs),]
 
-sites<-unique(df$Site.Name)
+sites<-unique(df$site.name)
 lawa <-unique(df$LAWAID)
 measurements<-unique(df$Measurement)
 
-# setwd("//file/herman/R/OA/08/02/2016/Water Quality/1.Imported/BOP")
-# 
-# for(i in 1:length(sites)){
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="Ammoniacal-N (BOP)")
-#   myplot1<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='Ammoniacal-N') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="TON (BOP)")
-#   myplot2<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='TON') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="TN (BOP)")
-#   myplot3<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='TN') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="DRP (BOP)")
-#   myplot4<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='DRP') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="TP (BOP)")
-#   myplot5<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='TP') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="Black Disc (BOP)")
-#   myplot6<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='Black Disc') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="Turbidity (BOP)")
-#   myplot7<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='Turbidity') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="pH (BOP)")
-#   myplot8<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='pH') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   data <- subset(df,Site.Name==sites[i] & Measurement=="E. coli (BOP)")
-#   myplot9<-ggplot(data, aes(Date.Time, value))+geom_point(color=data$color)+labs(title='E. coli') + 
-#     scale_x_datetime(breaks = "2 year", expand = c(0, 0), labels=date_format("%Y"))
-#   
-#   pdf(paste(lawa[i],".pdf",sep=""),title = sites[i], width=10,height=7,paper="a4r")
-#   
-#   print(grid.arrange(myplot1, myplot2,myplot3, myplot4,myplot5, myplot6, myplot7,myplot8, myplot9, ncol=3, nrow=3,main = sites[i]))
-#   dev.off()
-#   cat(lawa[i],sites[i],"\n")
-#   
-# }
-# 
-# setwd(wd)
-# 
 
 ## Build XML Document --------------------------------------------
 tm<-Sys.time()
@@ -157,21 +105,21 @@ con$addTag("Agency", "Bay of Plenty")
 
 tab <- "\t"
 
-max<-length(df$Date.Time)
+max<-dim(df)[1]
 
 i<-1
 #for each site
 while(i<=max){
-  s<-df$Site.Name[i]
+  s<-df$site.name[i]
   # store first counter going into while loop to use later in writing out sample values
   start<-i
   
-  cat(i,df$Site.Name[i],"\n")   ### Monitoring progress as code runs
+  cat(i,df$site.name[i],"\n")   ### Monitoring progress as code runs
   
-  while(df$Site.Name[i]==s){
+  while(df$site.name[i]==s){
     #for each measurement
     #cat(datatbl$SiteName[i],"\n")
-    con$addTag("Measurement",  attrs=c(SiteName=df$Site.Name[i]), close=FALSE)
+    con$addTag("Measurement",  attrs=c(SiteName=df$site.name[i]), close=FALSE)
     
     #### I need to join in the DatasourceName to the Measurement name here, or perhaps in the qetl CSV
     con$addTag("DataSource",  attrs=c(Name=df$DataSource[i],NumItems="2"), close=FALSE)
@@ -282,7 +230,7 @@ while(i<=max){
   
   # Adding WQ Sample Datasource to finish off this Site
   # along with Sample parameters
-  con$addTag("Measurement",  attrs=c(SiteName=df$Site.Name[start]), close=FALSE)
+  con$addTag("Measurement",  attrs=c(SiteName=df$site.name[start]), close=FALSE)
   con$addTag("DataSource",  attrs=c(Name="WQ Sample", NumItems="1"), close=FALSE)
   con$addTag("TSType", "StdSeries")
   con$addTag("DataType", "WQSample")
@@ -299,31 +247,32 @@ while(i<=max){
   # for the TVP and associated measurement water quality parameters
   con$addTag("Data", attrs=c(DateFormat="mowsecs", NumItems="1"),close=FALSE)
   # for each tvp
-  ## THIS NEEDS SOME WORK.....
-  ## just pulling out mowsecs Depth from, depth to, sample level, sample frequency, laketype
-  sample<-df[c(15,7,8,9,13,14)] ## 
-  sample<-sample[start:end,]
-  sample<-as.tbl(sample)
- # sample<-distinct(sample,mowsecs)
-  
-  sample<-sample[order(sample$mowsecs),]
-  ## THIS NEEDS SOME WORK.....
-  for(a in 1:nrow(sample)){ 
-    con$addTag("E",close=FALSE)
-    con$addTag("T",sample$mowsecs[a])
-    con$addTag("I1", paste("Depth From",tab,  sample$Depth.from[a], tab, "Depth To", tab, sample$Depth.to[a], tab, "Sample Level", tab,
-                            sample$Samplelevel..epilimnion..thermocline..hypolimnion.[a], "Sample Frequency",tab, sample$SampleFrequency[a],
-                           tab, "Sample type", sample$Laketype..Polymictic..Stratified..Brackish.[a], tab,  sep=""))
-    con$closeTag() # E
+  if(0){
+    ## THIS NEEDS SOME WORK.....
+    ## just pulling out mowsecs Depth from, depth to, sample level, sample frequency, laketype
+    sample<-df[,match(c("mowsecs","Frequency"),names(df))] ## 
+    sample<-sample[start:end,]
+    sample<-as.tbl(sample)
+    # sample<-distinct(sample,mowsecs)
+    
+    sample<-sample[order(sample$mowsecs),]
+    ## THIS NEEDS SOME WORK.....
+    for(a in 1:nrow(sample)){ 
+      con$addTag("E",close=FALSE)
+      con$addTag("T",sample$mowsecs[a])
+      # con$addTag("I1", paste("Depth From",tab,  sample$Depth.from[a], tab, "Depth To", tab, sample$Depth.to[a], tab, "Sample Level", tab,
+      #                        sample$Samplelevel..epilimnion..thermocline..hypolimnion.[a], "Sample Frequency",tab, sample$SampleFrequency[a],
+      #                        tab, "Sample type", sample$Laketype..Polymictic..Stratified..Brackish.[a], tab,  sep=""))
+      con$addTag("I1", paste0("Sample Frequency",tab, sample$Frequency[a]))
+      con$closeTag() # E
+    }
   }
-  
   con$closeTag() # Data
   con$closeTag() # Measurement    
   
 }
 
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file="boplakes.xml")
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/boprcLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 
-setwd(od)

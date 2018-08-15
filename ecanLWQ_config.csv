@@ -49,13 +49,21 @@ SQ35888,Site
 SQ34548,Site
 SQ36037,Site
 SQ36148,Site
+Ammoniacal Nitrogen,Measurement
+Dissolved Reactive Phosphorus,Measurement
 Total Phosphorus,Measurement
 Total Nitrogen,Measurement
-Chlorophyll a,Measurement
-Ammoniacal Nitrogen,Measurement
 E. coli,Measurement
+Ecoli,Measurement
 pH,Measurement
+Nitrate Nitrogen,Measurement
 Secchi Disk,Measurement
-Potentially toxic cyanobacteria biovolume,Measurement
-Total cyanobacteria biovolume,Measurement
+Total Oxidised Nitrogen,Measurement
+Total Organic Nitrogen,Measurement
+Nitrate Nitrite Nitrogen,Measurement
+TON,Measurement
+Chlorophyll A,Measurement
+CHL a,Measurement
+Cyanotox,Measurement
+Cyanoall,Measurement
 WQ Sample,Measurement
