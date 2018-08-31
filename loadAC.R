@@ -41,7 +41,7 @@ Measurements <- subset(df,df$Type=="Measurement")[,1]
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='AC'])
 
 sites=configsites

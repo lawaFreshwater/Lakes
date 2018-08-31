@@ -25,7 +25,7 @@ require(RCurl)
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/hbrcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='HBRC'])
@@ -34,10 +34,10 @@ Measurements <- subset(df,df$Type=="Measurement")[,1]
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  (download.file(url,destfile="tmphbrc",method="wininet",quiet=T))
   # pause(1)
-  xmlfile <- xmlParse(file = "tmpnrc")
-  unlink("tmpr")
+  xmlfile <- xmlParse(file = "tmphbrc")
+  unlink("tmphbrc")
   error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
   if(length(error)==0){
     return(xmlfile)   # if no error, return xml data

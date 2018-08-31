@@ -6,21 +6,21 @@ Lake Waikaremoana Top,Site
 Lake Opouahi Top,Site
 Lake Tutira Top,Site
 Lake Waikopiro Top,Site
-Total Phosphorus,Measurement
-Dissolved Reactive Phosphorus,Measurement
-E. Coli,Measurement
 Ammoniacal Nitrogen,Measurement
-Total Oxidised Nitrogen,Measurement
-TON,Measurement
-NNN,Measurement
-Nitrate Nitrite Nitrogen,Measurement
-Nitrate Nitrogen,Measurement
+Total Phosphorus,Measurement
+Total Nitrogen,Measurement
+Secchi Depth,Measurement
+E. Coli,Measurement
+Chlorophyll a WATER,Measurement
 pH (Lab),Measurement
 pH (Field),Measurement
-Total Nitrogen,Measurement
-Chlorophyll a WATER,Measurement
-Secchi Depth,Measurement
-Total Phosphorus [Total Phosphorus],Measurement
-WQ Sample,Measurement
-Cyanotox,Measurement
-Cyanoall,Measurement
+Dissolved Reactive Phosphorus,MeasurementB
+Total Oxidised Nitrogen,MeasurementB
+TON,MeasurementB
+NNN,MeasurementB
+Nitrate Nitrite Nitrogen,MeasurementB
+Nitrate Nitrogen,MeasurementB
+Total Phosphorus [Total Phosphorus],MeasurementB
+WQ Sample,MeasurementB
+Cyanotox,MeasurementB
+Cyanoall,MeasurementB

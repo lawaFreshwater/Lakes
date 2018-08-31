@@ -1,25 +1,24 @@
 Value,Type
-6301,Site
+6301,SiteX
 6303,Site
 7605,Site
 45001,Site
-45003,Site
-45011,Site
+45003,SiteX
+45011,SiteX
 44616,Site
-pH,Retired
+436000,Site
 Ammonia,Measurement
 Total Nitrogen,Measurement
-Total Oxidised Nitrogen,Measurement
 Total Phosphorus,Measurement
 e.Coli,Measurement
 Transparency,Measurement
 Chlorophyll,Measurement
-Total Phosphorus,Measurement
-Soluble Phosphorus,Measurement
-SolublePhosphorus.RAW,Measurement
-DRP,Measurement
-Nitrate,Measurement
-Dissolved Reactive Phosphorus,Measurement
-Phosphorus (Dissolved Reactive),Measurement
-Nitrogen (Nitrate),Measurement
 pH,Measurement
+Total Oxidised Nitrogen,MeasurementB
+Soluble Phosphorus,MeasurementB
+SolublePhosphorus.RAW,MeasurementB
+DRP,MeasurementB
+Nitrate,MeasurementB
+Dissolved Reactive Phosphorus,MeasurementB
+Phosphorus (Dissolved Reactive),MeasurementB
+Nitrogen (Nitrate),MeasurementB

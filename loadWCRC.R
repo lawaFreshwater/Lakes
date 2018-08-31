@@ -30,14 +30,14 @@ tab="\t"
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/wcrcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='WCRC'])
 Measurements <- subset(df,df$Type=="Measurement")[,1]
 
 #to remove lines that don't match
-Measurements1 <- c("Ammonia Total", "Nitrogen (Total)","Phosphorous Total", "Chlorophyll a")
+# Measurements1 <- c("Ammonia Total", "Nitrogen (Total)","Phosphorous Total", "Chlorophyll a")
 
 
 #To get metadata into data frame
@@ -220,7 +220,7 @@ if(0){
     }
   }
 }
-cat("Saving: ",Sys.time()-tm,"\n")
+cat("\nSaving: ",Sys.time()-tm,"\n")
 saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/wcrcLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 

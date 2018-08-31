@@ -26,7 +26,7 @@ require(RCurl)
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/trcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='TRC'])
@@ -67,7 +67,7 @@ con$addTag("Agency", "TRC")
 
 
 for(i in 1:length(sites)){
-  cat(i,'out of ',length(sites),'\n')
+  cat("\n",i,'out of ',length(sites),'\n')
   for(j in 1:length(Measurements)){
     
     url <- paste("https://extranet.trc.govt.nz/getdata/LAWA_lake_WQ.hts?service=Hilltop",
@@ -77,45 +77,26 @@ for(i in 1:length(sites)){
                  "&From=2006-01-01",
                  "&To=2018-01-01",sep="")
     url <- gsub(" ", "%20", url)
-    # cat(url,"\n")
-    
-    
     #------------------------------------------
-    
-    
-    
     xmlfile <- requestData(url)
     
-    
     if(!is.null(xmlfile)){
+      cat("getting",Measurements[j],'\t')
       xmltop<-xmlRoot(xmlfile)
-      
       m<-xmltop[['Measurement']]
-      
       
       # Create new node to replace existing <Data /> node in m
       DataNode <- newXMLNode("Data",attrs=c(DateFormat="Calendar",NumItems="2"))
-      
-      #addChildren(DataNode, newXMLNode(name = "E",parent = DataNode))
-      
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "T","time"))
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I1","item1"))
-      #addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I2","item2"))
-      
-      
-      #cat(saveXML(DataNode),"\n")
+     
       tab="\t"
       
       #work on this to make more efficient
       if(Measurements[j]=="WQ Sample"){
         ## Make new E node
         # Get Time values
-        #ans <- lapply(c("T"),function(var) unlist(xpathApply(m,paste("//",var,sep=""),xmlValue)))
         ans <- xpathApply(m,"//T",xmlValue)
         ans <- unlist(ans)
-        
-        
-        
+
         #new bit here
         for(k in 1:length(ans)){
           
@@ -143,11 +124,8 @@ for(i in 1:length(sites)){
           }
           # Adding the Item1 node
           addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I1",item1))
-          
         }
-        
-        
-        
+
       } else {
         ## Make new E node
         # Get Time values
@@ -186,12 +164,9 @@ for(i in 1:length(sites)){
             for(n in 3:xmlSize(m[['Data']][[N]])){      
               #Getting attributes and building string to put in Item 2
               attrs <- xmlAttrs(m[['Data']][[N]][[n]])  
-              
               item2 <- paste(item2,attrs[1],tab,attrs[2],tab,sep="")
-              
             }
           }
-          
           addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I2",item2))
           
         } 
@@ -201,11 +176,8 @@ for(i in 1:length(sites)){
       oldNode <- m[['Data']]
       newNode <- DataNode
       replaceNodes(oldNode, newNode)
-      
-      
-      
+
       con$addNode(m) 
-      
     }
   }
 }

@@ -17,13 +17,13 @@ Lake Vincent Centre,Site
 Lake Vincent North,Site
 The Reservoir Centre,Site
 The Reservoir West,Site
-Nitrogen (Total),Measurement
-Nitrogen (Nitrate),Measurement
-Phosphorus (Total),Measurement
-Phosphorus (Dissolved Reactive),Measurement
-pH (Lab),Measurement
-Clarity (Secchi Disc),Measurement
 Chlorophyll A <mg/l> [Chlorophyll A <mg/l>],Measurement
 Nitrogen (Total Ammoniacal),Measurement
+Phosphorus (Total),Measurement
+Nitrogen (Total),Measurement
 E-Coli <CFU>,Measurement
+pH (Lab),Measurement
+Clarity (Secchi Disc),Measurement
 WQ Sample,Measurement
+Nitrogen (Nitrate),MeasurementB
+Phosphorus (Dissolved Reactive),MeasurementB

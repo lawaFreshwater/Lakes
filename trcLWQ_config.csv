@@ -13,7 +13,7 @@ NH4,Measurement
 TP,Measurement
 CHLA,Measurement
 PH,Measurement
-SECCHI,Measurement
-ECOLI,Measurement
-CYANOTOX,Measurement
-CYANOALL,Measurement
+SECCHI,MeasurementB
+ECOLI,MeasurementB
+CYANOTOX,MeasurementB
+CYANOALL,MeasurementB

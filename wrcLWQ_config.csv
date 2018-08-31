@@ -9,15 +9,9 @@ Value,Type
 37322,Site
 37050,Site
 NH4,Measurement
-pH,Measurement
+Chlorophyll A,Measurement
 Total Phosphorus,Measurement
 TotalNitrogen,Measurement
-Chlorophyll A,Measurement
+pH,Measurement
 Secchi Disk,Measurement
-ECOLI,Measurement
-E Coli,Measurement
-E-Coli,Measurement
-E. Coli,Measurement
-Escherichia Coli,Measurement
-CyanoTox,Measurement
-CyanoAll,Measurement
+EColi,MeasurementB

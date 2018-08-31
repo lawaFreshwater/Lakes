@@ -26,20 +26,17 @@ Value,Type
 108242,Site
 108346,Site
 108347,Site
+Total Phosphorus,Measurement
 Ammoniacal Nitrogen,Measurement
-Nitrate Nitrogen,Measurement
-pH (Lab),Measurement
-Chlorophyll a,Measurement
-Total Dissolved Nitrogen,Measurement
-Total Dissolved Phosphorus,Measurement
-Dissolved reactive phosphorus,Measurement
-DRP,Measurement
+Total Nitrogen,Measurement
 Secchi Depth,Measurement
-WQ Sample,Measurement
-e.Coli,BMeasurementB
-E. coli,BMeasurementB
-E-coli,BMeasurementB
-e coli,BMeasurementB
+Chlorophyll a,Measurement
+Chlorophyll a (low level),Measurement
+pH (Lab),Measurement
 Escherichia coli,Measurement
-Cyanotox,Measurement
-Cyanoall,Measurement
+Nitrate Nitrogen,MeasurementB
+Total Dissolved Nitrogen,MeasurementB
+Total Dissolved Phosphorus,MeasurementB
+Dissolved reactive phosphorus,MeasurementB
+DRP,MeasurementB
+WQ Sample,MeasurementB

@@ -8,14 +8,15 @@ Lake Onslow at Boat Ramp,Site
 Lake Waihola at End of jetty,Site
 Lake Dunstan at Dead Mans Point,Site
 Lake Wanaka at Outlet,Site
-Total Nitrogen,Measurement
-pH (Lab),Measurement
-E-Coli MPN,Measurement
 Ammoniacal Nitrogen,Measurement
 Total Phosphorus,Measurement
+Total Nitrogen,Measurement
+E-Coli MPN,Measurement
 Chlorophyll a,Measurement
-Dissolved reactive phosphorus,Measurement
-DRP,Measurement
-Nitrate nitrogen,Measurement
-Secchi disk,Measurement
-Secchi depth,Measurement
+pH (Lab),Measurement
+Dissolved reactive phosphorus,MeasurementB
+DRP,MeasurementB
+Nitrate nitrogen,MeasurementB
+Secchi disk,MeasurementB
+Secchi depth,MeasurementB
+Secchi,MeasurementB

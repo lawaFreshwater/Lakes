@@ -2,17 +2,20 @@ Value,Type
 L Brunner @ GYB Mid Lake - 0-25m tube,Site
 L. Haupiri @ H2 5m,Site
 L Brunner @ GYB Cashmere Bay - 4m,Site
-pH,Measurement
+Phosphorous Total,Measurement
 Ammonia Total,Measurement
 Nitrogen (Total),Measurement
-Phosphorous Total,Measurement
-Chlorophyll a,Measurement
 Water Clarity (Secchi Disc),Measurement
-Ecoli,Measurement
-E coli,Measurement
-E. coli,Measurement
-E.coli,Measurement
+Chlorophyll a,Measurement
 pH,Measurement
 Phosphorous (Total),Measurement
-Cyanotox,Measurement
-Cyanoall,Measurement
+Nitrogen (Total),Measurement
+E.coli (Mem Filtration),Measurement
+Ecoli,MeasurementB
+E coli,MeasurementB
+E. coli,MeasurementB
+E.coli,MeasurementB
+pH,MeasurementB
+Phosphorous (Total),MeasurementB
+Cyanotox,MeasurementB
+Cyanoall,MeasurementB

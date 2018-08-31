@@ -23,10 +23,10 @@ require(RCurl)
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  (download.file(url,destfile="tmpwrc",method="wininet",quiet=T))
   # pause(1)
-  xmlfile <- xmlParse(file = "tmpnrc")
-  unlink("tmpr")
+  xmlfile <- xmlParse(file = "tmpwrc")
+  unlink("tmpwrc")
   error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
   if(length(error)==0){
     return(xmlfile)   # if no error, return xml data
@@ -35,11 +35,14 @@ requestData <- function(url){
   }
 }
 
+#There's a different set of sites for Ecoli than for the other measurements.
+# sites%in%c(37348,37332,37352,37354,37355,37359,37360,37362,37365,37340,37339,37338)
+
 
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/wrcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='WRC'])
@@ -54,11 +57,21 @@ for(i in 1:length(sites)){
   cat('\n',i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
     
+    # http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?datasource=0&
+    #   service=SOS&version=2.0&request=GetObservation&featureOfInterest=37362&
+    #     procedure=LBACTO.Sample.Results.P&observedProperty=EColi&
+    #       temporalfilter=om:phenomenonTime,P10Y
     
+    # if(Measurements[j]=="EColi"){
+    # url <- paste0("http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?",
+    #               "datasource=0&service=SOS&version=2.0&request=GetObservation&featureOfInterest=",sites[i],
+    #               "&procedure=LBACTO.Sample.Results.P&observedProperty=EColi&temporalfilter=om:phenomenonTime,P10Y")  
+    # }else{
     url <- paste0("http://envdata.waikatoregion.govt.nz:8080/KiWIS/KiWIS?",
-                  "datasource=0&service=SOS&version=2.0&request=GetObservation&agency=LAWA&featureOfInterest=",
-                  sites[i], "&procedure=LWQ.Sample.Results.P&observedProperty=",
+                  "datasource=0&service=SOS&version=2.0&request=GetObservation&agency=LAWA&featureOfInterest=",sites[i],
+                  "&procedure=LWQ.Sample.Results.P&observedProperty=",
                   Measurements[j], "&temporalfilter=om:phenomenonTime,P12Y")
+# }
     xmlfile <- requestData(url)
     
    if(xpathApply(xmlRoot(xmlfile),path="count(//wml2:point)",xmlValue)==0){
@@ -145,7 +158,7 @@ for(i in 1:length(sites)){
 
 #----------------
 tm<-Sys.time()
-cat("Building XML\n")
+cat("\nBuilding XML\n")
 cat("Creating:",Sys.time()-tm,"\n")
 
 con <- xmlOutputDOM("Hilltop")

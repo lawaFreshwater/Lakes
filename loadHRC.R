@@ -26,7 +26,7 @@ require(RCurl)
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/hrcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='HRC'])
@@ -258,6 +258,6 @@ if(length(t)==0){
 }
 
 cat("Saving: ",Sys.time()-tm,"\n")
-saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/hrcLWQ_cens.xml"))
+saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/hrcLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 

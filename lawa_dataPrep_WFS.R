@@ -33,7 +33,7 @@ source("file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/scripts/WQuali
 ld <- function(urlIn,dataLocation,case.fix=TRUE){
   if(dataLocation=="web"){
     str<- tempfile(pattern = "file", tmpdir = tempdir())
-    (download.file(urlIn,destfile=str,method="wininet"))
+    (download.file(urlIn,destfile=str,method="wininet",quiet = T))
     
     xmlfile <- xmlParse(file = str)
     unlink(str)
@@ -100,18 +100,6 @@ cc <- function(file){
 ## Load csv with WFS addresses
 urls2018      <- "file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/CouncilWFS.csv"
 urls          <- read.csv(urls2018,stringsAsFactors=FALSE)
-#urls$Agency[urls$Agency=="TDC"] <- "xTDC"   ## Commenting out Tasman DC due to Hilltop Server issues
-#urls2016      <- "//file/herman/R/OA/08/02/2016/Water Quality/R/lawa_state/CouncilWFS.csv"
-#urls          <- read.csv(urls2016,stringsAsFactors=FALSE)
-# stopGapNames  <- read.csv("//file/herman/R/OA/08/02/2018/Water Quality/R/lawa_state/agencyRegion.csv",stringsAsFactors=FALSE)
-
-# Drop BOPRC - GIS Server erroring
-#urls <- urls[-2,]
-# Drop GDC - Error on SErver
-#urls <- urls[-5,]
-
-#url <- "https://hbrcwebmap.hbrc.govt.nz/arcgis/services/emar/MonitoringSiteReferenceData/MapServer/WFSServer?request=GetFeature&service=WFS&typename=MonitoringSiteReferenceData&srsName=urn:ogc:def:crs:EPSG:6.9:4326"
-#url = "http://gis.horizons.govt.nz/arcgis/services/emar/MonitoringSiteReferenceData/MapServer/WFSServer?request=GetFeature&service=WFS&typename=MonitoringSiteReferenceData"
 
 # Config for data extract from WFS
 vars <- c("SiteID","CouncilSiteID","LawaSiteID","LWQuality","LType","LFENZID","Region","Agency")
@@ -323,8 +311,54 @@ for(h in 1:length(urls$URL)){
   }
 }
 
-### LOG FINISH: output to ROutput folder
 sink()
+
+
+################################################################################################
+#Load Auckland metadata separately.  Special little snowflakes.
+acMetaData=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/ACLakesMetaData.csv",stringsAsFactors = F)[1:5,]
+names(acMetaData)=c("CouncilSiteID","SiteID","NZTME","NZMTN","SWQAltitude","Depth","SWQLanduse","SWQFrequencyLast5","SWQFrequencyAll")
+acMetaData$Region='auckland'
+acMetaData$Agency='ac'
+acMetaData$LWQuality='yes'
+acMetaData$accessDate=format(file.info("H:/ericg/16666LAWA/2018/Lakes/1.Imported/ACLakesMetaData.csv")$mtime,"%d-%b-%Y")
+source("k:/R_functions/nztm2wgs.r")
+latlon=nztm2wgs(ce = acMetaData$NZTME,cn = acMetaData$NZMTN)
+acMetaData$Long=latlon[,2]
+acMetaData$Lat=latlon[,1]
+rm(latlon)
+
+lawaIDs=read.csv("H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/2018_csv_config_files/LAWAMasterSiteListasatMarch2018.csv",stringsAsFactors = F)
+lawaIDs=lawaIDs[lawaIDs$Module=="Lakes",]
+lawaIDs$Lat=as.numeric(lawaIDs$Latitude)
+lawaIDs$Long=as.numeric(lawaIDs$Longitude)
+sum(is.na(lawaIDs$Lat))
+sum(is.na(lawaIDs$Long))
+
+md=rep(0,dim(acMetaData)[1])
+nameMatch=rep("",dim(acMetaData)[1])
+bestMatch=rep(NA,dim(acMetaData)[1])
+for(ast in 1:dim(acMetaData)[1]){
+  dists=sqrt((acMetaData$Lat[ast]-lawaIDs$Lat)^2+(acMetaData$Long[ast]-lawaIDs$Long)^2)
+  cat(min(dists,na.rm=T)*111000,'\t')
+  bestMatch[ast]=which.min(dists)
+  md[ast]=min(dists,na.rm=T)
+  nameMatch[ast]=lawaIDs$SiteName[which.min(dists)]
+}
+mean(md)*111000 #1.6km
+cbind(acMetaData[,1:2],nameMatch,md*111000)
+acMetaData$LawaSiteID=lawaIDs$LawaID[bestMatch]
+acMetaData$LawaSiteID[4]=NA
+acMetaData$SWQFrequencyAll='variable'
+acMetaData$SWQFrequencyLast5='variable'
+siteTable <- merge(siteTable,acMetaData,all=T)%>%select(c("CouncilSiteID", "LawaSiteID", "SiteID","LFENZID", "LWQuality", "LType",
+                                                          "Region","Agency", "Lat", "Long"))
+rm(acMetaData,nameMatch,dists,md,ast,bestMatch)
+
+################################################################################################
+
+
+### LOG FINISH: output to ROutput folder
 ###
 
 
@@ -347,32 +381,16 @@ siteTable$Long[toSwitch]=newLon
 rm(newLon,toSwitch)
 plot(siteTable$Long,siteTable$Lat,col=as.numeric(factor(siteTable$Agency)))
 points(siteTable$Long,siteTable$Lat,pch=16,cex=0.2)
+siteTable$Agency[siteTable$Agency=="Environment Canterbury"] <- "ECAN"
+siteTable$Agency[siteTable$Agency=="ac"] <- "AC"
 table(siteTable$Agency)
 
-#siteTable$Long[siteTable$LawaSiteID=="NRWQN-00022"] <-siteTable$Long[siteTable$LawaSiteID=="NRWQN-00022"][2]
 
-# For WCRC-00031 - location is wrong in WFS
-# NZTM coordinates from WCRC website: 1466541,5295450
-# WGS84, now:   Latitude	Longitude  	-42.48179737	171.37623113
-
-# siteTable$Lat[siteTable$LawaSiteID=="WCRC-00031"]  <- -42.48179737
-# siteTable$Long[siteTable$LawaSiteID=="WCRC-00031"] <- 171.37623113
-
-## Correcting variations in Region names
-siteTable$Region[siteTable$Region=="BayOfPlenty"]   <- "Bay of Plenty"
-siteTable$Region[siteTable$Region=="WaikatoRegion"] <- "Waikato"
-siteTable$Region[siteTable$Region=="HawkesBay"]     <- "Hawkes Bay"
-siteTable$Region[siteTable$Region=="WestCoast"]     <- "West Coast"
 
 
 ## Output for next script
-write.csv(x = siteTable,file = "LAWA_Site_Table_Lakes.csv")
+write.csv(x = siteTable,file = "h:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",row.names=F)
 #write.csv(x = siteTable,file = "LAWA_Site_Table1.csv")
-write.csv(x = siteTable,file = "LAWA_Site_Table_WFS_PULL_Lakes.csv")
+write.csv(x = siteTable,file = "h:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_WFS_PULL_Lakes.csv",row.names=F)
 
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
-configsites <- subset(df,df$Type=="Site")[,2]
-configsites <- as.vector(configsites)
-sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='nrc'])
-Measurements <- subset(df,df$Type=="Measurement")[,1]

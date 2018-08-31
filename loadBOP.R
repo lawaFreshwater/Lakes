@@ -16,6 +16,7 @@ require(ggplot2)
 library(gridExtra)
 library(scales)
 require(tidyr)   ### for reshaping data
+library(readr)
 
 #/* -===Include required function libraries===- */ 
 
@@ -28,7 +29,7 @@ trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 ## Convert datestring to mow seconds (number of seconds since 1-Jan-1940 00:00)
 mowSecs <- function(x){
   s<-strptime("1940-01-01","%Y-%m-%d", tz="GMT")  # USING GMT to avoid daylight time offset as default
-  if(nchar(x)>=13){                               # arguments assume time based on NZST and NZDT for
+  if(nchar(x[1])>=13){                               # arguments assume time based on NZST and NZDT for
     t<-strptime(x,"%d/%m/%Y %H:%M", tz="GMT")     # different parts of the year.
   } else {                                        # Will need to be aware of this for other work.
     t<-strptime(x,"%d/%m/%Y", tz="GMT")
@@ -52,46 +53,36 @@ nd <- function(val){
 }
 
 
-### BAY OF PLENTY
+### BAY OF PLENTY'UTF-8-BOM'
+fname <- "H:/ericg/16666LAWA/2018/Lakes/1.Imported/BoPLakesData2017a.csv"
+df <- read_csv(fname,guess_max = 20000)
+mtRows=which(apply(df,1,function(x)length(x)==sum(is.na(x))))
+if(length(mtRows)>0){
+  df=df[-mtRows,]
+}
+rm(mtRows)
 
-### There have been issues with wifi connections and reading data. I have elected
-### to copy data to a local drive a read into R from there. I as getting drop-outs
-### and incomplete data reads occassionally.
-#fname <- "//file/herman/R/OA/08/02/2015/Water Quality/0.As Supplied/BOP/csv/bop.txt"
-#fname <- "z://data/RScript/lawa_state/2015/csv/boprc-uncensored2.txt"
-fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/1.Imported/BOP lake data 2017_Cawthron.csv"
-df <- read.csv(fname,stringsAsFactors=FALSE,fileEncoding = 'UTF-8-BOM')
+df$`site name`[which(df$`site name`=='Site 1')] <- "Lake Rotoma Site 1"
 
-df <- gather(data=df,key="Measurement",value="ReportedLabValue",pH:TP)
-#df <- df[,c(1:13)]
 df$mowsecs   <- mowSecs(df$sdate)
 #check mowSec output
 cat("Number of NAs in derived mowsec field: ",sum(is.na(df$mowsecs)),"out of",length(df$mowsecs),"rows\n")
 
-if(sum(is.na(df$mowsecs))>0){
-  ## Apply the mowSec function item by item works fine (just takes a lot longer) 
-  for(i in 1:length(df[,1])){
-    df$mowsecs[i] <- mowSecs(df$Date.Time[i])
-  }
-}
-
-
 df$Date.Time <- strptime(df$sdate,"%d/%m/%Y", tz="GMT")
-df$DataSource <- df$Measurement
+df$DataSource <- df$parameter
 df$Qmowsecs   <- df$mowsecs   ## storing original mowsec value should any duplicate samples be found.
 
-df$value      <- as.numeric(sapply(df$ReportedLabValue,value))
-df$nd         <- nd(df$ReportedLabValue)
-df$color[df$nd==TRUE]      <- "red"
-df$color[df$nd==FALSE]    <- "black"
+df$value      <- as.numeric(sapply(df$`Value (mg/m3)`,value))
+df$value[which(is.na(df$value))] <- df$`Value (mg/m3)`[which(is.na(df$value))]
+df$nd         <- nd(df$`Uncencored value`)
 
 # reorder data to enable writing to Hilltop File
 # Sort by indexing order - Site, Measurement, DateTime
-df <- df[order(df$site.name,df$Measurement,df$mowsecs),]
+df <- df[order(df$`site name`,df$parameter,df$mowsecs),]
 
-sites<-unique(df$site.name)
-lawa <-unique(df$LAWAID)
-measurements<-unique(df$Measurement)
+sites<-unique(df$`site name`)
+lawa <-unique(df$`LAWA ID`)
+measurements<-unique(df$parameter)
 
 
 ## Build XML Document --------------------------------------------
@@ -110,24 +101,24 @@ max<-dim(df)[1]
 i<-1
 #for each site
 while(i<=max){
-  s<-df$site.name[i]
+  s<-df$`site name`[i]
   # store first counter going into while loop to use later in writing out sample values
   start<-i
   
-  cat(i,df$site.name[i],"\n")   ### Monitoring progress as code runs
+  cat(i,df$`site name`[i],"\n")   ### Monitoring progress as code runs
   
-  while(df$site.name[i]==s){
-    #for each measurement
+  while(df$`site name`[i]==s){
+    #for each parameter
     #cat(datatbl$SiteName[i],"\n")
-    con$addTag("Measurement",  attrs=c(SiteName=df$site.name[i]), close=FALSE)
+    con$addTag("Measurement",  attrs=c(SiteName=df$`site name`[i]), close=FALSE)
     
-    #### I need to join in the DatasourceName to the Measurement name here, or perhaps in the qetl CSV
+    #### I need to join in the DatasourceName to the parameter name here, or perhaps in the qetl CSV
     con$addTag("DataSource",  attrs=c(Name=df$DataSource[i],NumItems="2"), close=FALSE)
     con$addTag("TSType", "StdSeries")
     con$addTag("DataType", "WQData")
     con$addTag("Interpolation", "Discrete")
     con$addTag("ItemInfo", attrs=c(ItemNumber="1"),close=FALSE)
-    con$addTag("ItemName", df$Measurement[i])
+    con$addTag("ItemName", df$parameter[i])
     con$addTag("ItemFormat", "F")
     con$addTag("Divisor", "1")
     con$addTag("Units", df$Units[i])
@@ -137,14 +128,14 @@ while(i<=max){
     con$closeTag() # DataSource
     #saveXML(con$value(), file="out.xml")
     
-    # for the TVP and associated measurement water quality parameters
+    # for the TVP and associated parameter water quality parameters
     con$addTag("Data", attrs=c(DateFormat="mowsecs", NumItems="2"),close=FALSE)
-    d<- df$Measurement[i]
+    d<- df$parameter[i]
     
-    cat("       - ",df$Measurement[i],"\n")   ### Monitoring progress as code runs
+    cat("       - ",df$parameter[i],"\n")   ### Monitoring progress as code runs
     
     
-    while(df$Measurement[i]==d){
+    while(df$parameter[i]==d){
       
       # remember mowsec (record mowsec at end of while loop) mowsec <- df$mowsecs[i].
       # If next sample has the same mowsec 
@@ -164,10 +155,10 @@ while(i<=max){
       
       # for each tvp
       # Handle Greater than symbols
-      if(grepl(pattern = "^>",x =  df$ReportedLabValue[i],perl = TRUE)){
+      if(grepl(pattern = "^>",x =  df$`Uncencored value`[i],perl = TRUE)){
         con$addTag("E",close=FALSE)
         con$addTag("T",df$mowsecs[i])
-        con$addTag("I1", gsub(pattern = "^>", replacement = "", x = df$ReportedLabValue[i]))
+        con$addTag("I1", gsub(pattern = "^>", replacement = "", x = df$`Uncencored value`[i]))
         con$addTag("I2", paste("$ND",tab,">",tab,
                                "Method",tab,df$Method[i],tab,
                                "Detection Limit",tab,df$DetectionLimit[i],tab,
@@ -176,10 +167,10 @@ while(i<=max){
         con$closeTag() # E
         
         # Handle Less than symbols  
-      } else if(grepl(pattern = "^<",x =  df$ReportedLabValue[i],perl = TRUE)){
+      } else if(grepl(pattern = "^<",x =  df$`Uncencored value`[i],perl = TRUE)){
         con$addTag("E",close=FALSE)
         con$addTag("T",df$mowsecs[i])
-        con$addTag("I1", gsub(pattern = "^<", replacement = "", x = df$ReportedLabValue[i]))
+        con$addTag("I1", gsub(pattern = "^<", replacement = "", x = df$`Uncencored value`[i]))
         con$addTag("I2", paste("$ND",tab,"<",tab,
                                "Method",tab,df$Method[i],tab,
                                "Detection Limit",tab,df$DetectionLimit[i],tab,
@@ -188,10 +179,10 @@ while(i<=max){
         con$closeTag() # E
         
         # Handle Asterixes  
-      } else if(grepl(pattern = "^\\*",x =  df$ReportedLabValue[i],perl = TRUE)){
+      } else if(grepl(pattern = "^\\*",x =  df$`Uncencored value`[i],perl = TRUE)){
         con$addTag("E",close=FALSE)
         con$addTag("T",df$mowsecs[i])
-        con$addTag("I1", gsub(pattern = "^\\*", replacement = "", x = df$ReportedLabValue[i]))
+        con$addTag("I1", gsub(pattern = "^\\*", replacement = "", x = df$`Uncencored value`[i]))
         con$addTag("I2", paste("$ND",tab,"*",tab,
                                "Method",tab,df$Method[i],tab,
                                "Detection Limit",tab,df$DetectionLimit[i],tab,
@@ -203,7 +194,7 @@ while(i<=max){
       } else {
         con$addTag("E",close=FALSE)
         con$addTag("T",df$mowsecs[i])
-        con$addTag("I1", df$ReportedLabValue[i])
+        con$addTag("I1", df$`Uncencored value`[i])
         con$addTag("I2", paste("Method",tab,df$Method[i],tab,
                                "Detection Limit",tab,df$DetectionLimit[i],tab,
                                "$QC",tab,df$QualityCode[i],tab,
@@ -219,7 +210,7 @@ while(i<=max){
     }
     # next
     con$closeTag() # Data
-    con$closeTag() # Measurement
+    con$closeTag() # parameter
     
     
     if(i>max){break}
@@ -230,7 +221,7 @@ while(i<=max){
   
   # Adding WQ Sample Datasource to finish off this Site
   # along with Sample parameters
-  con$addTag("Measurement",  attrs=c(SiteName=df$site.name[start]), close=FALSE)
+  con$addTag("Measurement",  attrs=c(SiteName=df$`site name`[start]), close=FALSE)
   con$addTag("DataSource",  attrs=c(Name="WQ Sample", NumItems="1"), close=FALSE)
   con$addTag("TSType", "StdSeries")
   con$addTag("DataType", "WQSample")

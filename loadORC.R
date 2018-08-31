@@ -17,7 +17,7 @@ require(XML)     ### XML library to write hilltop XML
 require(dplyr)   ### dply library to manipulate table joins on dataframes
 require(RCurl)
 
-
+library(lubridate)
 
 tab="\t"
 
@@ -30,7 +30,7 @@ tab="\t"
 fname <- "file:///H:/ericg/16666LAWA/2018/Lakes/orcLWQ_config.csv"
 df <- read.csv(fname,sep=",",stringsAsFactors=FALSE)
 
-siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
+siteTable=read.csv("H:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors=FALSE)
 configsites <- subset(df,df$Type=="Site")[,1]
 configsites <- as.vector(configsites)
 sites = unique(siteTable$CouncilSiteID[siteTable$Agency=='ORC'])
@@ -45,7 +45,7 @@ metaMeasurements <- unique(meta$Measurement)
 
 ## Manually matching order of measurement names in the measurement vector to the metaMeasurement vector
 # metaMeasurements <- metaMeasurements[c(12,9,7,1,13,2)]
-metaMeasurements <- metaMeasurements[c(12,9,7,1,13,2,6,6,NA,NA,NA)]
+metaMeasurements <- metaMeasurements[c(1,13,12,7,2,9)]
 
 meas <- cbind.data.frame(metaMeasurements,Measurements, stringsAsFactors=FALSE)
 names(meas) <- c("Measurement","MeasurementName")
@@ -90,7 +90,7 @@ con$addTag("Agency", "ORC")
 #Adding in metadata
 
 for(i in 1:length(sites)){
-  cat(i,'out of',length(sites),'\n')
+  cat('\n',i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
     url <- paste("http://gisdata.orc.govt.nz/hilltop/WQGlobal.hts?service=Hilltop",
                  "&request=GetData&agency=LAWA",
@@ -99,7 +99,7 @@ for(i in 1:length(sites)){
                  "&From=2006-01-01",
                  "&To=2018-01-01",sep="")
     url <- gsub(" ", "%20", url)
-    cat(url,"\n")
+    # cat(url,"\n")
     
     #------------------------------------------
     # cat("Getting measurement",Measurements[j],"for",sites[i],".....\n")
@@ -108,6 +108,7 @@ for(i in 1:length(sites)){
     xmlfile <- requestData(url)
     
     if(!is.null(xmlfile)){
+      cat('getting some',Measurements[j],'\t')
       xmltop<-xmlRoot(xmlfile)
       
       m<-xmltop[['Measurement']]
@@ -130,28 +131,34 @@ for(i in 1:length(sites)){
       
       # subset data based on site and measurement and sort on date
       p <- subset(meta, meta$Site.Name==sites[i] & meta$MeasurementName==Measurements[j])
-
-      p$pDTz <- as.POSIXct(strptime(p$Date.Time,format = "%d/%m/%Y",tz="GMT"))
-      p <- p[order(p$pDTz),]
-
-      #Concatenate a column with all metadata parameters included and create vector
-      p$I2 <- paste("LAWAID", p$LAWAID, "ORC", p$ORC, "Measurement", p$Measurement,
-                    "ReportedLabValue", p$ReportedLabValue, "RawValue", p$RawValue, "Depthfrom", p$Depthfrom,
-                     "Depthto", p$Depthto, "SampleLevel", p$Samplelevel,
-                    "Method", p$Method, "DetectionLimit", p$DetectionLimit, "QualityCode",
-                    p$QualityCode, "SampleFrequency", p$SampleFrequency, "LakeType",
-                    p$Laketype, sep=tab)
-
-      # remove unnecessary variables. Measurement, LAWAID, ORC, Site.Name, Date.Time and the last two pDTz and I2 (
-      # all other columns contianed the info noiw in I2
-      p<-p[,c(1:5,17:18)]
-
-      ## converting xml to dataframe in order to match datatimes for wq measurement parameters
-      mdata <- xmlToDataFrame(m[['Data']],stringsAsFactors=FALSE)
-      mdata$pDTz <- as.POSIXct(strptime(mdata$T,format = "%Y-%m-%dT%H:%M:%S",tz="GMT"))
-      mdata <- merge(mdata,p,by="pDTz",all=TRUE)
-      mdata <- mdata[complete.cases(mdata$T),]
-
+      
+      
+      if(dim(p)[1]>0){
+        p$pDTz <- as.POSIXct(strptime(p$Date.Time,format = "%d/%m/%Y",tz="GMT"))
+        p <- p[order(p$pDTz),]
+        
+        #Concatenate a column with all metadata parameters included and create vector
+        p$I2 <- paste("LAWAID", p$LAWAID, "ORC", p$ORC, "Measurement", p$Measurement,
+                      "ReportedLabValue", p$ReportedLabValue, "RawValue", p$RawValue, "Depthfrom", p$Depthfrom,
+                      "Depthto", p$Depthto, "SampleLevel", p$Samplelevel,
+                      "Method", p$Method, "DetectionLimit", p$DetectionLimit, "QualityCode",
+                      p$QualityCode, "SampleFrequency", p$SampleFrequency, "LakeType",
+                      p$Laketype, sep=tab)
+        
+        # remove unnecessary variables. Measurement, LAWAID, ORC, Site.Name, Date.Time and the last two pDTz and I2 (
+        # all other columns contianed the info noiw in I2
+        p<-p[,c(1:5,17:18)]
+        
+        # ## converting xml to dataframe in order to match datatimes for wq measurement parameters
+        # mdata <- xmlToDataFrame(m[['Data']],stringsAsFactors=FALSE)
+        # mdata$pDTz <- as.POSIXct(strptime(mdata$T,format = "%Y-%m-%dT%H:%M:%S",tz="GMT"))
+        
+        mdata=data.frame(T=ansTime,pDTz=as.numeric(ymd_hms(ansTime)),value=ansValue)
+        
+        mdata <- merge(mdata,p,by="pDTz",all=TRUE)
+        mdata <- mdata[complete.cases(mdata$T),]
+      }
+      
       
       # loop through TVP nodes
       for(N in 1:xmlSize(m[['Data']])){  ## Number of Time series values
@@ -192,13 +199,13 @@ for(i in 1:length(sites)){
         
         ## Manually adding supplied parameters
         
-        
-          if(nchar(item2)==0){
-            item2 <- mdata$I2[N]
-          }else{
-            item2 <- paste(item2,tab,mdata$I2[N],tab,sep="")
-          }
-        
+          # 
+          # if(nchar(item2)==0){
+          #   item2 <- mdata$I2[N]
+          # }else{
+          #   item2 <- paste(item2,tab,mdata$I2[N],tab,sep="")
+          # }
+          # 
         ## Writing I2 node
         addChildren(DataNode[[xmlSize(DataNode)]], newXMLNode(name = "I2",item2))
         
@@ -215,7 +222,7 @@ for(i in 1:length(sites)){
       replaceNodes(oldNode, newNode)
       
       con$addNode(m) 
-      cat("Completed measurement",Measurements[j],"for",sites[i],"\n\n")
+      # cat("Completed measurement",Measurements[j],"for",sites[i],"\n\n")
     }
   }
 }
