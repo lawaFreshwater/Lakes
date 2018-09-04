@@ -194,7 +194,11 @@ while(i<=max){
       } else {
         con$addTag("E",close=FALSE)
         con$addTag("T",df$mowsecs[i])
-        con$addTag("I1", df$`Uncencored value`[i])
+        if(df$parameter[i]%in%c("Secchi","pH")){
+          con$addTag("I1", df$`Value (mg/m3)`[i])
+        }else{
+          con$addTag("I1", df$`Uncencored value`[i])
+        }
         con$addTag("I2", paste("Method",tab,df$Method[i],tab,
                                "Detection Limit",tab,df$DetectionLimit[i],tab,
                                "$QC",tab,df$QualityCode[i],tab,
