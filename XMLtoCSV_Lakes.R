@@ -21,28 +21,22 @@ agency='ecan'
 
 for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
   suppressWarnings({rm(forcsv)})
-  forcsv=xml2csvLake(agency=agency,maxHistory = 20,quiet=T)
+  forcsv=xml2csvLake(agency=agency,maxHistory = 20,quiet=F)
   cat(length(unique(forcsv$parameter)),paste(unique(forcsv$parameter),collapse=', '),'\n')
-  # forcsv$parameter[grepl(pattern = 'Potentially toxic cyanobacteria biovolume',x = forcsv$parameter,ignore.case = T)] <- "CYANOTOX"
-  # forcsv$parameter[grepl(pattern = 'Cyanobacteria biovolume, Total',x = forcsv$parameter,ignore.case = T)] <- "CYANOALL"
-  # forcsv$parameter[grepl(pattern = 'Cyanotox',x = forcsv$parameter,ignore.case = T)] <- "CYANOTOX"
-  # forcsv$parameter[grepl(pattern = 'Cyanoall',x = forcsv$parameter,ignore.case = T)] <- "CYANOALL"
   forcsv$parameter[grepl(pattern = 'Transparency',x = forcsv$parameter,ignore.case = T)] <- "Secchi"
   forcsv$parameter[grepl(pattern = 'Secchi',x = forcsv$parameter,ignore.case = T)] <- "Secchi"
   forcsv$parameter[grepl(pattern = 'loroph',x = forcsv$parameter,ignore.case = T)] <- "CHLA"
   forcsv$parameter[grepl(pattern = 'CHLA',x = forcsv$parameter,ignore.case = T)] <- "CHLA"
   forcsv$parameter[grepl(pattern = 'coli',x = forcsv$parameter,ignore.case = T)] <- "ECOLI"
-  # forcsv$parameter[grepl(pattern = 'Soluble Phosphorus',x = forcsv$parameter,ignore.case = T)] <- "DRP"
-  # forcsv$parameter[grepl(pattern = 'Dissolved Reactive',x = forcsv$parameter,ignore.case = T)] <- "DRP"
   forcsv$parameter[grepl(pattern = 'phosphorus',x = forcsv$parameter,ignore.case = T)] <- "TP"
   forcsv$parameter[grepl(pattern = 'phosphorous',x = forcsv$parameter,ignore.case = T)] <- "TP"
   forcsv$parameter[grepl(pattern = 'TP',x = forcsv$parameter,ignore.case = F)] <- "TP"
   forcsv$parameter[grepl(pattern = 'Ammonia',x = forcsv$parameter,ignore.case = T)] <- "NH4N"
   forcsv$parameter[grepl(pattern = 'NH4',x = forcsv$parameter,ignore.case = T)] <- "NH4N"
-  # forcsv$parameter[grepl(pattern = 'nitrate',x = forcsv$parameter,ignore.case = T)] <- "NO3N" #Note, might be nitrate nitrogen
+  forcsv$parameter[agrepl(pattern = 'TN (HRC)',x = forcsv$parameter,ignore.case = T)] <- "TN" #Note, might be nitrate nitrogen
   forcsv$parameter[grepl(pattern = 'total nitrogen',x = forcsv$parameter,ignore.case = T)] <- "TN" #Note, might be nitrate nitrogen
+  forcsv$parameter[grepl(pattern = 'totalnitrogen',x = forcsv$parameter,ignore.case = T)] <- "TN" #Note, might be nitrate nitrogen
   forcsv$parameter[agrepl(pattern = 'Nitrogen (Total)',x = forcsv$parameter,ignore.case = T)] <- "TN" #Note, might be nitrate nitrogen
-  # forcsv$parameter[grepl(pattern = 'TN',x = forcsv$parameter,ignore.case = F)] <- "TN"
   forcsv$parameter[grepl(pattern = 'ph \\(field\\)',x = forcsv$parameter,ignore.case = T)] <- "pH"
   forcsv$parameter[grepl(pattern = 'ph \\(lab\\)',x = forcsv$parameter,ignore.case = T)] <- "pH"
   cat(length(unique(forcsv$parameter)),paste(unique(forcsv$parameter),collapse='\t'),'\n')
@@ -120,7 +114,7 @@ write.csv(nms,paste0("h:/ericg/16666LAWA/2018/Lakes/4.Analysis/",
 
 
 
-#Per council audit
+#Per agency audit
 for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
   forcsv=loadLatestCSVLake(agency)
   nvar=length(uvars <- unique(forcsv$parameter))
@@ -181,23 +175,31 @@ for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","
 
 
 
-#Combine and add metadata
-combo=data.frame(council=NA,SiteName=NA,Date=NA,Value=NA,Method=NA,parameter=NA)
+#Combine and add metadata ####
+combo=data.frame(agency=NA,SiteName=NA,Date=NA,Value=NA,Method=NA,parameter=NA,Censored=NA,centype=NA)
 siteTable <- read.csv(file = "h:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site_Table_Lakes.csv",stringsAsFactors = F)
-for(council in c("ecan","ac","boprc","es","gdc","gwrc","hbrc","hrc","mdc","ncc","nrc","orc","tdc","trc","wcrc","wrc")){
-  forcsv=loadLatestCSVLake(council,quiet=T)
+siteTable$LawaSiteID[siteTable$SiteID=="Lake Rotoiti Site 3"]='EBOP-00094'
+for(agency in c("ecan","ac","boprc","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
+  checkXMLageLakes(agency)
+  forcsv=loadLatestCSVLake(agency,quiet=T)
   if(!is.null(forcsv)){
-    cat(council,'\n',paste(names(forcsv),collapse='\t'),'\n')
-    forcsv$council=council
+    cat(agency,'\n',paste(names(forcsv),collapse='\t'),'\n')
+    forcsv$agency=agency
 
-    if(council %in% c('ac','es','wrc')){ #es mg/L  ac mg/L g/m3             wanted in mg/m3
+    if(agency %in% c('ac','es','wrc')){ #es mg/L  ac mg/L g/m3             wanted in mg/m3
       forcsv$Value[forcsv$parameter=="CHLA"]=forcsv$Value[forcsv$parameter=="CHLA"]*1000
     }
-    if(council=='boprc'){
+    if(agency=='boprc'){
       forcsv$Value[forcsv$parameter%in%c("NH4N")]=forcsv$Value[forcsv$parameter%in%c("NH4N")]/1000
       forcsv$Value[forcsv$parameter%in%c("TP")]=forcsv$Value[forcsv$parameter%in%c("TP")]/1000
       forcsv$Value[forcsv$parameter%in%c("TN")]=forcsv$Value[forcsv$parameter%in%c("TN")]/1000
     }
+    if(agency=='es'){
+      #Implement email-requested changes from Lydia Hayward 5/9/18
+      # When I first supplied the URLS - I indicated that our Secchi data includes both vertical
+      #  and horizontal readings. This is specified in the metadata. Can you please clarify
+      #   if these will be distinguished in the analysis?    
+      }
     
     combo=merge(combo,forcsv[,names(forcsv)%in%names(combo)],all=T)
   }  
@@ -207,7 +209,7 @@ combo=unique(combo)
 
 #plot all councils next to each other to check unit consistency
 upara=unique(combo$parameter)
-ucounc=unique(combo$council)
+ucounc=unique(combo$agency)
 # for(up in seq_along(upara)){
   pvals=combo[combo$parameter==upara[up],]
   p1=quantile(pvals$Value,p=0.01,na.rm=T)
@@ -218,31 +220,31 @@ ucounc=unique(combo$council)
   pvals=pvals[pvals$Value<p999,]
   par(mfrow=c(4,3),mar=c(3,1,2,1))
   for(cc in seq_along(ucounc)){
-    cvals=pvals$Value[pvals$council==ucounc[cc]]
+    cvals=pvals$Value[pvals$agency==ucounc[cc]]
     if(length(cvals[!is.na(cvals)])>2){
-      plot(density(cvals,na.rm=T,from = p1,to=p95),main=paste(ucounc[cc],upara[up]),xlab='',xlim=c(p5,p95))
+      plot(density(cvals,na.rm=T,from = p1,to=p95),main=paste(ucounc[cc],upara[up]),xlab='',xlim=c(p1,p95),log='')
     }else{
       plot(0,0)
     }
-  # }
-}
-# combo$Value[combo$council=='boprc'&combo$parameter=='TN']=combo$Value[combo$council=='boprc'&combo$parameter=='TN']/1000
+   }
+# }
+# combo$Value[combo$agency=='boprc'&combo$parameter=='TN']=combo$Value[combo$agency=='boprc'&combo$parameter=='TN']/1000
 
 write.csv(combo,paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesCombined.csv'),row.names = F)
-
+dir(path='h:/ericg/16666LAWA/2018/Lakes',pattern='LakesCombined.csv',recursive = T,full.names = T,ignore.case = T)
 
 names(combo)
 
 #These lines tell us that ac and boprc sites are not in siteTable$CouncilSiteID
 table(unique(tolower(combo$SiteName))%in%tolower(siteTable$CouncilSiteID))
-unique(combo$council[!tolower(combo$SiteName)%in%tolower(siteTable$CouncilSiteID)])
+unique(combo$agency[!tolower(combo$SiteName)%in%tolower(siteTable$CouncilSiteID)])
 unique(combo$SiteName[!tolower(combo$SiteName)%in%tolower(siteTable$CouncilSiteID)])
 
 missingSites <- unique(combo$SiteName[!tolower(combo$SiteName)%in%tolower(siteTable$CouncilSiteID)])
 table(tolower(missingSites)%in%tolower(siteTable$SiteID))
 missingSites[tolower(missingSites)%in%tolower(siteTable$SiteID)]->toSwitch
 
-unique(combo$council[unlist(lapply(toSwitch[tolower(toSwitch)%in%tolower(siteTable$SiteID)],
+unique(combo$agency[unlist(lapply(toSwitch[tolower(toSwitch)%in%tolower(siteTable$SiteID)],
                                    FUN = function(y){grep(pattern=y,x = combo$SiteName,ignore.case = T)}))])
 #some SiteNames are found in siteTable$siteID
 #So we'll flick them round in the siteTable
@@ -268,8 +270,22 @@ siteTable$CouncilSiteIDlc=tolower(siteTable$CouncilSiteID)
 
 lakesWithMetadata=merge(combo,siteTable,by.x="SiteNamelc",by.y="CouncilSiteIDlc",all.x=T,all.y=F)
 lakesWithMetadata <- lakesWithMetadata%>%select(-'SiteNamelc')
+try(dir.create(paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"))))
 write.csv(lakesWithMetadata,paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesWithMetadata.csv'),row.names = F)
 save(lakesWithMetadata,file = paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesWithMetadata.rData'))
 
 
+for(agency in c("ecan","ac","boprc","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
+  forcsv=loadLatestCSVLake(agency,quiet=T,maxHistory = 100)
+  if(agency%in%c("ac","boprc")){
+    cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$SiteID))]),collapse='\t'),'\n')
+  }else{
+    cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$CouncilSiteID))]),collapse='\t'),'\n')
+  }
+  # eval(parse(text=paste0(agency,'=forcsv')))
+}
+
+
+
+lawaIDs=read.csv("H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/2018_csv_config_files/LAWAMasterSiteListasatMarch2018.csv",stringsAsFactors = F)
 
