@@ -100,9 +100,10 @@ cc <- function(file){
 ## Load csv with WFS addresses
 urls2018      <- "file:///H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/CouncilWFS.csv"
 urls          <- read.csv(urls2018,stringsAsFactors=FALSE)
+rm(urls2018)
 
 # Config for data extract from WFS
-vars <- c("SiteID","CouncilSiteID","LawaSiteID","LWQuality","LType","LFENZID","Region","Agency")
+vars <- c("SiteID","CouncilSiteID","LawaSiteID","LWQuality","LType","LFENZID","Region","Agency","SWQLanduse","SWQAltitude")
 
 
 ### Even though the field names have been defined in the documentation, there are still differences in Field Names specified by each Council
@@ -117,8 +118,17 @@ logfile <- paste(logfolder,"lawa_dataPrep_WFS.log",sep="")
 sink(logfile)
 ###
 
-
+if(exists('siteTable')){
+  rm(siteTable)
+  }
 for(h in 1:length(urls$URL)){
+  
+  if(urls$Agency[h]=="ES"){
+    vars[9] <- "SWQLandUse"
+  }else{
+    vars[9] <- "SWQLanduse"
+  }
+  
   if(grepl("^x", urls$Agency[h])){
     next
   } 
@@ -299,6 +309,9 @@ for(h in 1:length(urls$URL)){
         rm(latlong)      
         #a<-as.data.frame(a,stringsAsFactors=FALSE)
         names(a)<-c(vars,"Lat","Long")
+        if(urls$Agency[h]=='ES'){
+          names(a)[which(names(a)=='SWQLandUse')] <- "SWQLanduse"
+        }
         if(!exists("siteTable")){
           siteTable<-as.data.frame(a,stringsAsFactors=FALSE)
         } else{
@@ -352,7 +365,7 @@ acMetaData$LawaSiteID[4]=NA
 acMetaData$SWQFrequencyAll='variable'
 acMetaData$SWQFrequencyLast5='variable'
 siteTable <- merge(siteTable,acMetaData,all=T)%>%select(c("CouncilSiteID", "LawaSiteID", "SiteID","LFENZID", "LWQuality", "LType",
-                                                          "Region","Agency", "Lat", "Long"))
+                                                          "Region","Agency", "Lat", "Long","SWQLanduse","SWQAltitude"))
 rm(acMetaData,nameMatch,dists,md,ast,bestMatch)
 
 ################################################################################################
@@ -379,6 +392,7 @@ newLon=siteTable$Lat[toSwitch]
 siteTable$Lat[toSwitch] <- siteTable$Long[toSwitch]
 siteTable$Long[toSwitch]=newLon
 rm(newLon,toSwitch)
+par(mfrow=c(1,1))
 plot(siteTable$Long,siteTable$Lat,col=as.numeric(factor(siteTable$Agency)))
 points(siteTable$Long,siteTable$Lat,pch=16,cex=0.2)
 siteTable$Agency[siteTable$Agency=="Environment Canterbury"] <- "ECAN"
@@ -386,6 +400,7 @@ siteTable$Agency[siteTable$Agency=="ac"] <- "AC"
 table(siteTable$Agency)
 
 
+siteTable$LawaSiteID[siteTable$CouncilSiteID=="Lake Rotoiti Site 3"]='EBOP-00094'
 
 
 ## Output for next script
