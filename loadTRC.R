@@ -37,9 +37,9 @@ Measurements <- subset(df,df$Type=="Measurement")[,1]
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  (download.file(url,destfile="tmptrc",method="wininet",quiet=T))
   # pause(1)
-  xmlfile <- xmlParse(file = "tmpnrc")
+  xmlfile <- xmlParse(file = "tmptrc")
   unlink("tmpr")
   error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
   if(length(error)==0){

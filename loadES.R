@@ -33,9 +33,9 @@ Measurements <- subset(df,df$Type=="Measurement")[,1]
 #function to either create full xml file or return xml file as NULL depending
 #on the result from the above funciton
 requestData <- function(url){
-  (download.file(url,destfile="tmpnrc",method="wininet",quiet=T))
+  (download.file(url,destfile="tmpes",method="wininet",quiet=T))
   # pause(1)
-  xmlfile <- xmlParse(file = "tmpnrc")
+  xmlfile <- xmlParse(file = "tmpes")
   unlink("tmpr")
   error<-as.character(sapply(getNodeSet(doc=xmlfile, path="//Error"), xmlValue))
   if(length(error)==0){
@@ -62,7 +62,7 @@ con$addTag("Agency", "ES")
 
 
 for(i in 1:length(sites)){
-  
+  cat(i,'out of',length(sites),'\n')
   for(j in 1:length(Measurements)){
     url <- paste("http://odp.es.govt.nz/lakes.hts?service=Hilltop",
                  "&request=GetData",
@@ -71,8 +71,7 @@ for(i in 1:length(sites)){
                  "&From=2006-01-01",
                  "&To=2018-01-01",sep="")
     url <- gsub(" ", "%20", url)
-    cat(url,"\n")
-    
+
     
     #------------------------------------------
     
@@ -204,6 +203,7 @@ for(i in 1:length(sites)){
   }
 }
 cat("Saving: ",Sys.time()-tm,"\n")
+try(dir.create(paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"))))
 saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/esLWQ.xml"))
 cat("Finished",Sys.time()-tm,"\n")
 
