@@ -15,13 +15,11 @@ c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")
 
 
 lawalakenames=c("TN","NH4N","TP","CHLA","pH","Secchi","ECOLI")
-agency='wcrc'
-agency='boprc'
-agency='ecan'
+agency='nrc'
 
 for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
   suppressWarnings({rm(forcsv)})
-  forcsv=xml2csvLake(agency=agency,maxHistory = 20,quiet=F)
+  forcsv=xml2csvLake(agency=agency,maxHistory = 40,quiet=F)
   cat(length(unique(forcsv$parameter)),paste(unique(forcsv$parameter),collapse=', '),'\n')
   forcsv$parameter[grepl(pattern = 'Transparency',x = forcsv$parameter,ignore.case = T)] <- "Secchi"
   forcsv$parameter[grepl(pattern = 'Secchi',x = forcsv$parameter,ignore.case = T)] <- "Secchi"
@@ -71,11 +69,11 @@ for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","
 
 
 
-
+#Combined audit
 library(lubridate)
 nms=data.frame(agency=NULL,xmlAge=NULL,var=NULL,earliest=NULL,latest=NULL,nMeas=NULL,nSite=NULL,meanMeas=NULL,maxMeas=NULL,minMeas=NULL,nNA=NULL)
 for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
-  forcsv=loadLatestCSVLake(agency)
+  forcsv=loadLatestCSVLake(agency,maxHistory = 100)
   if(!is.null(forcsv)){
     newRows=data.frame(agency=rep(agency,length(unique(forcsv$parameter))),
                        xmlAge=checkXMLageLakes(agency = agency,maxHistory = 30),
@@ -106,8 +104,8 @@ by(INDICES = nms$var,data = nms$agency,FUN=function(x)unique(as.character(x)))
 by(INDICES = nms$agency,data = nms$var,FUN=function(x)unique(as.character(x)))
 sort(unique(as.character(nms$var)))
 
-try(dir.create(path = paste0("h:/ericg/16666LAWA/2018/Lakes/4.Analysis/",
-                             format(Sys.Date(),"%Y-%m-%d"))))
+suppressWarnings(try(dir.create(path = paste0("h:/ericg/16666LAWA/2018/Lakes/4.Analysis/",
+                             format(Sys.Date(),"%Y-%m-%d")))))
 write.csv(nms,paste0("h:/ericg/16666LAWA/2018/Lakes/4.Analysis/",
                      format(Sys.Date(),"%Y-%m-%d"),"/lakeAudit.csv"))
 
@@ -116,7 +114,7 @@ write.csv(nms,paste0("h:/ericg/16666LAWA/2018/Lakes/4.Analysis/",
 
 #Per agency audit
 for(agency in c("ac","boprc","ecan","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
-  forcsv=loadLatestCSVLake(agency)
+  forcsv=loadLatestCSVLake(agency,maxHistory = 100)
   nvar=length(uvars <- unique(forcsv$parameter))
   nsite=length(usites <- unique(forcsv$SiteName))
   councilDeets=as.data.frame(matrix(nrow=nvar*nsite,ncol=7))
@@ -181,15 +179,15 @@ siteTable <- read.csv(file = "h:/ericg/16666LAWA/2018/Lakes/1.Imported/LAWA_Site
 siteTable$LawaSiteID[siteTable$SiteID=="Lake Rotoiti Site 3"]='EBOP-00094'
 for(agency in c("ecan","ac","boprc","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
   checkXMLageLakes(agency)
-  forcsv=loadLatestCSVLake(agency,quiet=T)
+  forcsv=loadLatestCSVLake(agency,quiet=T,maxHistory = 100)
   if(!is.null(forcsv)){
-    cat(agency,'\n',paste(names(forcsv),collapse='\t'),'\n')
+    # cat(agency,'\n',paste(names(forcsv),collapse='\t'),'\n')
     forcsv$agency=agency
 
     if(agency %in% c('ac','es','wrc')){ #es mg/L  ac mg/L g/m3             wanted in mg/m3
       forcsv$Value[forcsv$parameter=="CHLA"]=forcsv$Value[forcsv$parameter=="CHLA"]*1000
     }
-    if(agency=='boprc'){
+    if(agency=='boprc'){  #delivered in mg/m3, dividing by 1000 gives it in mg/L (g/m3).  We dont divide CHLA, so that's left as mg/m3
       forcsv$Value[forcsv$parameter%in%c("NH4N")]=forcsv$Value[forcsv$parameter%in%c("NH4N")]/1000
       forcsv$Value[forcsv$parameter%in%c("TP")]=forcsv$Value[forcsv$parameter%in%c("TP")]/1000
       forcsv$Value[forcsv$parameter%in%c("TN")]=forcsv$Value[forcsv$parameter%in%c("TN")]/1000
@@ -210,7 +208,8 @@ combo=unique(combo)
 #plot all councils next to each other to check unit consistency
 upara=unique(combo$parameter)
 ucounc=unique(combo$agency)
-# for(up in seq_along(upara)){
+ for(up in seq_along(upara)){
+windows()
   pvals=combo[combo$parameter==upara[up],]
   p1=quantile(pvals$Value,p=0.01,na.rm=T)
   p5=quantile(pvals$Value,p=0.05,na.rm=T)
@@ -227,11 +226,14 @@ ucounc=unique(combo$agency)
       plot(0,0)
     }
    }
-# }
+ }
 # combo$Value[combo$agency=='boprc'&combo$parameter=='TN']=combo$Value[combo$agency=='boprc'&combo$parameter=='TN']/1000
 
+
+
+
 write.csv(combo,paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesCombined.csv'),row.names = F)
-dir(path='h:/ericg/16666LAWA/2018/Lakes',pattern='LakesCombined.csv',recursive = T,full.names = T,ignore.case = T)
+# combo=read.csv(tail(dir(path='h:/ericg/16666LAWA/2018/Lakes',pattern='LakesCombined.csv',recursive = T,full.names = T,ignore.case = T),1),stringsAsFactors = F)
 
 names(combo)
 
@@ -259,6 +261,7 @@ table(unique(tolower(combo$SiteName))%in%tolower(siteTable$CouncilSiteID))
 #Drop the ac sites that we dont have metadata for
 missingSites <- unique(combo$SiteName[!tolower(combo$SiteName)%in%tolower(siteTable$CouncilSiteID)])
 combo=combo[-which(tolower(combo$SiteName)%in%tolower(missingSites)),]
+#61019 to 59272
 rm(missingSites)
 
 table(unique(tolower(combo$SiteName))%in%tolower(siteTable$CouncilSiteID))
@@ -270,22 +273,36 @@ siteTable$CouncilSiteIDlc=tolower(siteTable$CouncilSiteID)
 
 lakesWithMetadata=merge(combo,siteTable,by.x="SiteNamelc",by.y="CouncilSiteIDlc",all.x=T,all.y=F)
 lakesWithMetadata <- lakesWithMetadata%>%select(-'SiteNamelc')
-try(dir.create(paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"))))
+suppressWarnings(try(dir.create(paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d")))))
 write.csv(lakesWithMetadata,paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesWithMetadata.csv'),row.names = F)
 save(lakesWithMetadata,file = paste0('h:/ericg/16666LAWA/2018/Lakes/1.Imported/',format(Sys.Date(),"%Y-%m-%d"),'/LakesWithMetadata.rData'))
+# load(tail(dir(path='h:/ericg/16666LAWA/2018/Lakes/1.Imported/',pattern='LakesWithMetadata',full.names = T,recursive = T),1),verbose=T)
+
+# for(agency in c("ecan","ac","boprc","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
+#   forcsv=loadLatestCSVLake(agency,quiet=T,maxHistory = 100)
+#   if(agency%in%c("ac","boprc")){
+#     cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$SiteID))]),collapse='\t'),'\n')
+#   }else{
+#     cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$CouncilSiteID))]),collapse='\t'),'\n')
+#   }
+#   # eval(parse(text=paste0(agency,'=forcsv')))
+# }
+# 
+# 
+# 
+# lawaIDs=read.csv("H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/2018_csv_config_files/LAWAMasterSiteListasatMarch2018.csv",stringsAsFactors = F)
+
+SiteName        Date Value Method parameter Censored centype agency                 sdp oldVal
+589   100442 03-May-2017 0.117     NA        TN    FALSE   FALSE    nrc 10044203-May-2017TN    117
+874   100448 03-May-2017 0.153     NA        TN    FALSE   FALSE    nrc 10044803-May-2017TN    153
+NA        NA        <NA>    NA     NA      <NA>       NA    <NA>   <NA>                <NA>     NA
 
 
-for(agency in c("ecan","ac","boprc","es","gwrc","hbrc","hrc","nrc","orc","trc","wcrc","wrc")){
-  forcsv=loadLatestCSVLake(agency,quiet=T,maxHistory = 100)
-  if(agency%in%c("ac","boprc")){
-    cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$SiteID))]),collapse='\t'),'\n')
-  }else{
-    cat(agency,'\t',paste0(unique(siteTable$Agency[match(tolower(forcsv$SiteName),tolower(siteTable$CouncilSiteID))]),collapse='\t'),'\n')
-  }
-  # eval(parse(text=paste0(agency,'=forcsv')))
-}
+length(unique(lakesWithMetadata$LawaSiteID))    #153
+length(unique(lakesWithMetadata$SiteName))      #153 
+length(unique(lakesWithMetadata$CouncilSiteID)) #153
+length(unique(lakesWithMetadata$SiteID))        #153
 
-
-
-lawaIDs=read.csv("H:/ericg/16666LAWA/2018/WaterQuality/R/lawa_state/2018_csv_config_files/LAWAMasterSiteListasatMarch2018.csv",stringsAsFactors = F)
-
+length(unique(siteTable$LawaSiteID))    #174
+length(unique(siteTable$CouncilSiteID)) #174
+length(unique(siteTable$SiteID))        #168

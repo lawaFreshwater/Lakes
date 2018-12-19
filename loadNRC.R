@@ -201,7 +201,6 @@ for(i in 1:length(sites)){
   }
 }
 
-cat("Saving: ",Sys.time()-tm,"\n")
+try(dir.create(paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"))))
 saveXML(con$value(), file=paste0("H:/ericg/16666LAWA/2018/Lakes/1.Imported/",format(Sys.Date(),"%Y-%m-%d"),"/nrcLWQ.xml"))
-cat("Finished",Sys.time()-tm,"\n")
 

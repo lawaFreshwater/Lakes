@@ -263,8 +263,11 @@ for(h in 1:length(urls$URL)){
             }
   
             #Cleaning b to remove any leading and trailing spaces
-            trimws(b)
-            
+            b=trimws(b)
+            if(length(b)!=dim(a)[1]){
+              cat("Some sites appear to be missing",vars[i])
+              browser()
+            }
             a <- cbind(unlist(a),unlist(b))
           }
         }
@@ -401,6 +404,41 @@ table(siteTable$Agency)
 
 
 siteTable$LawaSiteID[siteTable$CouncilSiteID=="Lake Rotoiti Site 3"]='EBOP-00094'
+
+
+#Lesley Walls 24/9/2018
+#These are the BOP LFENZIDs that I have:
+#    Lake                         FENZID
+# Lake Okareka                    15325
+# Lake Okaro                      14290
+# Lake Okataina                   54731
+# Lake Rerewhakaaitu              40071
+# Lake Rotoehu                    40188
+# Lake Rotoiti                    54730
+# Lake Rotokakahi                 15621
+# Lake Rotoma                     40102
+# Lake Rotomahana                 54733
+# Lake Rotorua                    11133
+# Lake Tarawera                   54732
+# Lake Tikitapu                   15312
+
+siteTable$LFENZID[grep('okareka',siteTable$SiteID,ignore.case = T)] <- 15325
+siteTable$LFENZID[grep('Okaro',siteTable$SiteID,ignore.case = T)] <- 14290
+siteTable$LFENZID[grep('Okataina',siteTable$SiteID,ignore.case = T)] <- 54731
+siteTable$LFENZID[grep('Rerewhakaaitu',siteTable$SiteID,ignore.case = T)] <- 40071
+siteTable$LFENZID[grep('Rotoehu',siteTable$SiteID,ignore.case = T)] <- 40188
+siteTable$LFENZID[grep('Rotoiti',siteTable$SiteID,ignore.case = T)] <- 54730
+siteTable$LFENZID[grep('Rotokakahi',siteTable$SiteID,ignore.case = T)] <- 15621
+siteTable$LFENZID[grep('Rotoma',siteTable$SiteID,ignore.case = T)] <- 40102
+siteTable$LFENZID[grep('Rotomahana',siteTable$SiteID,ignore.case = T)] <- 54733
+siteTable$LFENZID[grep('Rotorua',siteTable$SiteID,ignore.case = T)] <- 11133
+siteTable$LFENZID[grep('Tarawera',siteTable$SiteID,ignore.case = T)] <- 54732
+siteTable$LFENZID[grep('Tikitapu',siteTable$SiteID,ignore.case = T)] <- 15312
+
+siteTable$LFENZID[grep(x = siteTable$CouncilSiteID,pattern = "Wainamu",ignore.case = T)] <- "45819"
+siteTable$LFENZID[grep(x = siteTable$CouncilSiteID,pattern = "Ototoa",ignore.case = T)] <- "50270"
+siteTable$LFENZID[grep(x = siteTable$CouncilSiteID,pattern = "Tomarata",ignore.case = T)] <- "21871"
+siteTable$LFENZID[grep(x = siteTable$CouncilSiteID,pattern = "Pupuke",ignore.case = T)] <- "50151"
 
 
 ## Output for next script
